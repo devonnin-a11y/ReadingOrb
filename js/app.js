@@ -28,11 +28,10 @@ const rewardBtn = document.getElementById("rewardBtn");
 const profileButtons = document.querySelectorAll(".profile-btn");
 const characterImage = document.getElementById("characterImage");
 
-
 // State
 let words = [];
 let currentIndex = 0;
-let isPlaying = false;      // for auto-play (Play button)
+let isPlaying = false;      // for auto-play via Play button
 let currentUtterance = null;
 
 let availableVoices = [];
@@ -45,6 +44,11 @@ let profiles = {
   Vio: { stars: 0 }
 };
 let currentProfile = "Vhon";
+
+const CHARACTER_IMAGES = {
+  Vhon: "img/vhon.png",
+  Vio: "img/vio.png"
+};
 
 // ---- Profile & storage helpers ----
 
@@ -65,6 +69,7 @@ function loadProfiles() {
   if (!profiles.Vio) profiles.Vio = { stars: 0 };
 
   updateProfileButtons();
+  updateCharacterImage();
   updateRewardBanner();
 }
 
@@ -87,6 +92,13 @@ function updateProfileButtons() {
     const p = btn.dataset.profile;
     btn.classList.toggle("active", p === currentProfile);
   });
+}
+
+function updateCharacterImage() {
+  if (!characterImage) return;
+  const src = CHARACTER_IMAGES[currentProfile] || CHARACTER_IMAGES.Vhon;
+  characterImage.src = src;
+  characterImage.alt = currentProfile + " character";
 }
 
 function getCurrentStars() {
@@ -244,6 +256,18 @@ function moveOrbToSpan(span) {
   orb.style.transform = `translate(${x}px, ${y}px)`;
 }
 
+// ---- Character speaking animation ----
+
+function startCharacterSpeaking() {
+  if (!characterImage) return;
+  characterImage.classList.add("speaking");
+}
+
+function stopCharacterSpeaking() {
+  if (!characterImage) return;
+  characterImage.classList.remove("speaking");
+}
+
 // ---- Speech helpers ----
 
 function stopSpeech() {
@@ -252,6 +276,7 @@ function stopSpeech() {
   }
   isPlaying = false;
   currentUtterance = null;
+  stopCharacterSpeaking();
 }
 
 // Auto-play one word at a time (Play button)
@@ -264,14 +289,20 @@ function speakWord(index) {
   utterance.rate = parseFloat(speedSlider.value);
   if (selectedVoice) utterance.voice = selectedVoice;
 
+  startCharacterSpeaking();
+
   utterance.onend = () => {
-    if (!isPlaying) return;
+    if (!isPlaying) {
+      stopCharacterSpeaking();
+      return;
+    }
     const nextIndex = currentIndex + 1;
     if (nextIndex < words.length) {
       setCurrentIndex(nextIndex);
       speakWord(nextIndex);
     } else {
       isPlaying = false;
+      stopCharacterSpeaking();
     }
   };
 
@@ -289,8 +320,13 @@ function playSequence(parts) {
   utter.rate = parseFloat(speedSlider.value);
   if (selectedVoice) utter.voice = selectedVoice;
 
+  startCharacterSpeaking();
+
   utter.onend = () => {
-    if (!rest.length) return;
+    if (!rest.length) {
+      stopCharacterSpeaking();
+      return;
+    }
     playSequence(rest);
   };
 
@@ -311,7 +347,7 @@ function speakPhonicsForIndex(index) {
     sequence = [...chunks, word]; // chunks then whole word
   } else {
     const letters = word.split("");
-    const letterString = letters.join(" "); // "c a t" → letter names
+    const letterString = letters.join(" "); // "c a t"
     sequence = [letterString, word];
   }
 
@@ -372,6 +408,7 @@ profileButtons.forEach((btn) => {
     if (!profile || profile === currentProfile) return;
     currentProfile = profile;
     updateProfileButtons();
+    updateCharacterImage();
     updateRewardBanner();
     saveProfiles();
   });

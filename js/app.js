@@ -18,11 +18,18 @@ const wordSlider = document.getElementById("wordSlider");
 const currentWordDisplay = document.getElementById("currentWordDisplay");
 const phonicsDisplay = document.getElementById("phonicsDisplay");
 
+// New: chunk mode + mode toggle + presets
+const chunkToggle = document.getElementById("chunkToggle");
+const modeToggle = document.getElementById("modeToggle");
+const modeLabel = document.getElementById("modeLabel");
+const presetButtons = document.querySelectorAll(".preset-btn");
+
 // State
 let words = [];
 let currentIndex = 0;
 let isPlaying = false;
 let currentUtterance = null;
+let kidMode = false;
 
 // Utility: switch screens
 function showScreen(screenName) {
@@ -60,6 +67,32 @@ function renderWords() {
   }
 }
 
+// Utility: rough chunking for "syllable-ish" groups
+function chunkify(word) {
+  const clean = word.toLowerCase().replace(/[^a-z]/g, "");
+  if (!clean) return [word];
+
+  const vowels = "aeiouy";
+  const chunks = [];
+  let current = clean[0];
+
+  for (let i = 1; i < clean.length; i++) {
+    const prevIsVowel = vowels.includes(clean[i - 1]);
+    const currIsVowel = vowels.includes(clean[i]);
+
+    // Split when switching between vowel/consonant
+    if (prevIsVowel !== currIsVowel) {
+      chunks.push(current);
+      current = clean[i];
+    } else {
+      current += clean[i];
+    }
+  }
+  chunks.push(current);
+
+  return chunks;
+}
+
 // Utility: update highlight, orb position, phonics text
 function setCurrentIndex(index) {
   if (words.length === 0) {
@@ -85,7 +118,15 @@ function setCurrentIndex(index) {
 
   const word = words[index];
   currentWordDisplay.textContent = word;
-  phonicsDisplay.textContent = word.split("").join(" - ");
+
+  if (chunkToggle && chunkToggle.checked) {
+    // Chunk mode – show groups like "ca / t" or "sun / set"
+    const chunks = chunkify(word);
+    phonicsDisplay.textContent = chunks.join(" / ");
+  } else {
+    // Basic phonics: letters separated by dashes
+    phonicsDisplay.textContent = word.split("").join(" - ");
+  }
 }
 
 // Utility: move orb under the active word
@@ -136,10 +177,26 @@ speedSlider.addEventListener("input", () => {
   speedValue.textContent = `${speedSlider.value}x`;
 });
 
+// Parent/Kid mode toggle
+modeToggle.addEventListener("click", () => {
+  kidMode = !kidMode;
+  document.body.classList.toggle("kid-mode", kidMode);
+  modeLabel.textContent = kidMode ? "Kid mode" : "Parent mode";
+});
+
+// Preset passage buttons
+presetButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const passage = btn.dataset.passage || "";
+    passageInput.value = passage;
+    passageInput.focus();
+  });
+});
+
 startReadingBtn.addEventListener("click", () => {
   const text = passageInput.value.trim();
   if (!text) {
-    alert("Type a sentence or passage first 😊");
+    alert("Type a sentence or tap a preset first 😊");
     return;
   }
 

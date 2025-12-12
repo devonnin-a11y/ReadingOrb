@@ -578,6 +578,96 @@ body.kid-mode input[type="range"] {
   height: 24px;
 }
 
+/* Layout: character + text side-by-side on bigger screens, stacked on mobile */
+
+.reading-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.character-panel {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.character-card {
+  background: radial-gradient(circle at 20% 0%, #ffffff33, #0b1829);
+  border-radius: 18px;
+  padding: 6px 10px;
+  border: 1px solid rgba(166, 220, 255, 0.6);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.5);
+}
+
+.character-img {
+  display: block;
+  height: 90px;
+  max-width: 120px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.65));
+  transition: transform 0.2s ease-out, filter 0.2s ease-out;
+}
+
+/* “Talking” animation when reading */
+
+.character-img.speaking {
+  animation: characterTalk 0.5s infinite alternate ease-in-out;
+}
+
+@keyframes characterTalk {
+  0% {
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.65));
+  }
+  100% {
+    transform: translateY(-4px) scale(1.03);
+    filter: drop-shadow(0 10px 14px rgba(255, 201, 75, 0.7));
+  }
+}
+
+/* Profile avatar icons */
+
+.profile-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.profile-btn span {
+  vertical-align: middle;
+}
+
+/* Desktop: character on the left, text on the right */
+
+@media (min-width: 520px) {
+  .reading-layout {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .character-panel {
+    margin-bottom: 0;
+    align-items: center;
+  }
+
+  .character-card {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .character-img {
+    height: 120px;
+    max-width: 140px;
+  }
+}
+
+
 @media (min-width: 520px) {
   .app {
     padding: 24px;

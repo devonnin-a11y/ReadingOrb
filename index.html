@@ -25,22 +25,24 @@
 
           <!-- Profiles for kids -->
           <div class="profile-switch">
-            <button
-              type="button"
-              class="profile-btn active"
-              data-profile="Vhon"
-            >
-              Vhon
-            </button>
-            <button
-              type="button"
-              class="profile-btn"
-              data-profile="Vio"
-            >
-              Vio
-            </button>
-          </div>
-        </div>
+  <button
+    type="button"
+    class="profile-btn active"
+    data-profile="Vhon"
+  >
+    <img src="img/vhon.png" alt="Vhon" class="profile-avatar" />
+    <span>Vhon</span>
+  </button>
+  <button
+    type="button"
+    class="profile-btn"
+    data-profile="Vio"
+  >
+    <img src="img/vio.png" alt="Vio" class="profile-avatar" />
+    <span>Vio</span>
+  </button>
+</div>
+
 
         <!-- Parent / Kid mode toggle -->
         <div class="mode-toggle">
@@ -139,18 +141,30 @@
 
       <!-- Screen 2: Kids reading + orb + phonics slider -->
       <section id="readingScreen" class="screen">
-        <div class="reading-top-bar">
-          <button id="backBtn" class="btn ghost">← Edit text</button>
+  <div class="reading-top-bar">
+    ...
+  </div>
 
-          <div class="play-controls">
-            <button id="playBtn" class="btn circle" title="Play" type="button">
-              ▶
-            </button>
-            <button id="stopBtn" class="btn circle" title="Stop" type="button">
-              ⏹
-            </button>
-          </div>
-        </div>
+  <div class="reading-layout">
+    <!-- Character panel -->
+    <div class="character-panel">
+      <div class="character-card">
+        <img
+          id="characterImage"
+          src="img/vhon.png"
+          alt="Current reader character"
+          class="character-img"
+        />
+      </div>
+    </div>
+
+    <!-- Text + orb panel -->
+    <div class="reading-area">
+      <div id="orb" class="orb"></div>
+      <p id="readingText" class="reading-text"></p>
+    </div>
+  </div>
+
 
         <div class="reading-area">
           <div id="orb" class="orb"></div>

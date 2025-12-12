@@ -14,7 +14,13 @@
       <div class="header-main">
         <div>
           <h1 class="logo">✨ Orb Reader</h1>
-          <p class="tagline">Type it. Watch it. Sound it out.</p>
+          <p class="tagline">
+            Type it. Watch it. Sound it out.
+          </p>
+          <!-- Stars banner (achievement meter) -->
+          <div id="rewardBanner" class="reward-banner">
+            ⭐ Stars today: 0
+          </div>
         </div>
 
         <!-- Parent / Kid mode toggle -->
@@ -99,6 +105,14 @@
           <span id="speedValue" class="slider-value">0.9x</span>
         </div>
 
+        <!-- Voice selection (less robotic if a good voice exists on device) -->
+        <div class="slider-row voice-row">
+          <label for="voiceSelect" class="field-label">Voice</label>
+          <select id="voiceSelect" class="select">
+            <option value="">Auto (device default)</option>
+          </select>
+        </div>
+
         <button id="startReadingBtn" class="btn primary">
           Start Reading Mode ▶
         </button>
@@ -156,6 +170,13 @@
               <span class="word-label">Phonics:</span>
               <span id="phonicsDisplay" class="word-value">–</span>
             </div>
+          </div>
+
+          <!-- Achievement button -->
+          <div class="reward-row">
+            <button id="rewardBtn" class="btn chip reward-btn" type="button">
+              ⭐ They did great!
+            </button>
           </div>
 
           <p class="hint small parent-tip">

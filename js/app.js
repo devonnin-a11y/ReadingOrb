@@ -26,6 +26,8 @@ const voiceSelect = document.getElementById("voiceSelect");
 const rewardBanner = document.getElementById("rewardBanner");
 const rewardBtn = document.getElementById("rewardBtn");
 const profileButtons = document.querySelectorAll(".profile-btn");
+const characterImage = document.getElementById("characterImage");
+
 
 // State
 let words = [];

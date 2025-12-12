@@ -18,11 +18,14 @@ const wordSlider = document.getElementById("wordSlider");
 const currentWordDisplay = document.getElementById("currentWordDisplay");
 const phonicsDisplay = document.getElementById("phonicsDisplay");
 
-// New: chunk mode + mode toggle + presets
+// New: chunk mode + mode toggle + presets + voice + rewards
 const chunkToggle = document.getElementById("chunkToggle");
 const modeToggle = document.getElementById("modeToggle");
 const modeLabel = document.getElementById("modeLabel");
 const presetButtons = document.querySelectorAll(".preset-btn");
+const voiceSelect = document.getElementById("voiceSelect");
+const rewardBanner = document.getElementById("rewardBanner");
+const rewardBtn = document.getElementById("rewardBtn");
 
 // State
 let words = [];
@@ -30,6 +33,10 @@ let currentIndex = 0;
 let isPlaying = false;
 let currentUtterance = null;
 let kidMode = false;
+
+let availableVoices = [];
+let selectedVoice = null;
+let rewardCount = 0;
 
 // Utility: switch screens
 function showScreen(screenName) {
@@ -119,23 +126,50 @@ function setCurrentIndex(index) {
   const word = words[index];
   currentWordDisplay.textContent = word;
 
+  // Clear phonics display for fresh render
+  phonicsDisplay.innerHTML = "";
+
   if (chunkToggle && chunkToggle.checked) {
-    // Chunk mode – show groups like "ca / t" or "sun / set"
+    // Chunk mode – show groups like "sun / set" in colored pills
     const chunks = chunkify(word);
-    phonicsDisplay.textContent = chunks.join(" / ");
+    chunks.forEach((chunk, idx) => {
+      const span = document.createElement("span");
+      span.textContent = chunk;
+      span.classList.add("chunk");
+      if (idx % 2 === 1) span.classList.add("chunk-alt");
+      phonicsDisplay.appendChild(span);
+
+      if (idx < chunks.length - 1) {
+        const sep = document.createElement("span");
+        sep.textContent = "/";
+        sep.classList.add("chunk-sep");
+        phonicsDisplay.appendChild(sep);
+      }
+    });
   } else {
-    // Basic phonics: letters separated by dashes
-    phonicsDisplay.textContent = word.split("").join(" - ");
+    // Basic phonics: letters separated, but each in its own pill
+    const letters = word.split("");
+    letters.forEach((letter, idx) => {
+      const span = document.createElement("span");
+      span.textContent = letter;
+      span.classList.add("letter-pill");
+      phonicsDisplay.appendChild(span);
+
+      if (idx < letters.length - 1) {
+        const sep = document.createTextNode(" ");
+        phonicsDisplay.appendChild(sep);
+      }
+    });
   }
 }
 
-// Utility: move orb under the active word
+// Utility: move orb under the active word (centered)
 function moveOrbToSpan(span) {
   const areaRect = readingText.getBoundingClientRect();
   const spanRect = span.getBoundingClientRect();
 
   const x = spanRect.left + spanRect.width / 2 - areaRect.left;
-  const y = spanRect.bottom - areaRect.top + 8; // a bit under the word
+  const y = spanRect.bottom - areaRect.top + 10; // a bit under the word
 
   orb.style.transform = `translate(${x}px, ${y}px)`;
 }
@@ -156,6 +190,11 @@ function speakWord(index) {
   const word = words[index];
   const utterance = new SpeechSynthesisUtterance(word);
   utterance.rate = parseFloat(speedSlider.value);
+
+  if (selectedVoice) {
+    utterance.voice = selectedVoice;
+  }
+
   utterance.onend = () => {
     if (!isPlaying) return;
     const nextIndex = currentIndex + 1;
@@ -169,6 +208,50 @@ function speakWord(index) {
 
   currentUtterance = utterance;
   window.speechSynthesis.speak(utterance);
+}
+
+// Voice loading / selection
+function populateVoices() {
+  if (!("speechSynthesis" in window)) return;
+  availableVoices = window.speechSynthesis.getVoices();
+  if (!availableVoices.length || !voiceSelect) return;
+
+  // Clear and repopulate
+  voiceSelect.innerHTML = '<option value="">Auto (device default)</option>';
+
+  const englishVoices = availableVoices.filter(
+    (v) => v.lang && v.lang.toLowerCase().startsWith("en")
+  );
+
+  englishVoices.forEach((voice) => {
+    const opt = document.createElement("option");
+    opt.value = voice.name;
+    opt.textContent = voice.name;
+    voiceSelect.appendChild(opt);
+  });
+
+  // Try to auto-pick a "nice" voice if available
+  const preferredPatterns = /(Google US English|Microsoft.*Aria|Jenny|Neural)/i;
+  selectedVoice =
+    englishVoices.find((v) => preferredPatterns.test(v.name)) ||
+    englishVoices[0] ||
+    null;
+
+  if (selectedVoice) {
+    voiceSelect.value = selectedVoice.name;
+  } else {
+    voiceSelect.value = "";
+  }
+}
+
+// Banner update for rewards
+function updateRewardBanner() {
+  if (!rewardBanner) return;
+  rewardBanner.textContent = `⭐ Stars today: ${rewardCount}`;
+  // trigger pop animation
+  rewardBanner.classList.remove("pop");
+  void rewardBanner.offsetWidth; // reflow
+  rewardBanner.classList.add("pop");
 }
 
 // Events
@@ -192,6 +275,15 @@ presetButtons.forEach((btn) => {
     passageInput.focus();
   });
 });
+
+// Voice selection change
+if (voiceSelect) {
+  voiceSelect.addEventListener("change", () => {
+    const selectedName = voiceSelect.value;
+    selectedVoice =
+      availableVoices.find((v) => v.name === selectedName) || null;
+  });
+}
 
 startReadingBtn.addEventListener("click", () => {
   const text = passageInput.value.trim();
@@ -232,9 +324,26 @@ wordSlider.addEventListener("input", () => {
   setCurrentIndex(index);
 });
 
+// Reward button tap
+if (rewardBtn) {
+  rewardBtn.addEventListener("click", () => {
+    rewardCount += 1;
+    updateRewardBanner();
+    rewardBtn.classList.remove("pop");
+    void rewardBtn.offsetWidth;
+    rewardBtn.classList.add("pop");
+  });
+}
+
 // Init orb position when layout is ready
 window.addEventListener("load", () => {
   setTimeout(() => {
     moveOrbToSpan(readingText.querySelector(".word") || readingText);
   }, 300);
+
+  // Voices: populate when available
+  if ("speechSynthesis" in window) {
+    populateVoices();
+    window.speechSynthesis.onvoiceschanged = populateVoices;
+  }
 });

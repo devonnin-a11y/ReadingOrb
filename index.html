@@ -11,8 +11,20 @@
 <body>
   <div class="app">
     <header class="app-header">
-      <h1 class="logo">✨ Orb Reader</h1>
-      <p class="tagline">Type it. Watch it. Sound it out.</p>
+      <div class="header-main">
+        <div>
+          <h1 class="logo">✨ Orb Reader</h1>
+          <p class="tagline">Type it. Watch it. Sound it out.</p>
+        </div>
+
+        <!-- Parent / Kid mode toggle -->
+        <div class="mode-toggle">
+          <span id="modeLabel" class="mode-label">Parent mode</span>
+          <button id="modeToggle" class="toggle-pill" type="button">
+            <span class="toggle-knob"></span>
+          </button>
+        </div>
+      </div>
     </header>
 
     <main>
@@ -32,7 +44,47 @@
           placeholder="Example: The red cat sat on the big blue mat."
         ></textarea>
 
-        <div class="slider-row">
+        <!-- Quick preset passages -->
+        <h3 class="preset-heading">Quick practice passages</h3>
+        <p class="hint small">
+          Tap one to auto-fill. You can still edit the text after.
+        </p>
+
+        <div class="preset-list">
+          <button
+            type="button"
+            class="btn chip preset-btn"
+            data-passage="The cat sat on the mat. The dog sat on the log."
+          >
+            CVC – Cat and Dog
+          </button>
+
+          <button
+            type="button"
+            class="btn chip preset-btn"
+            data-passage="I can hop. I can run. I can jump. I can have fun!"
+          >
+            Action words – I can…
+          </button>
+
+          <button
+            type="button"
+            class="btn chip preset-btn"
+            data-passage="The sun is hot. The sky is blue. The grass is green. I like you."
+          >
+            Colors & simple sentences
+          </button>
+
+          <button
+            type="button"
+            class="btn chip preset-btn"
+            data-passage="Mom had a red pot. Dad had a big pan. We all had hot soup."
+          >
+            5-year-old warmup
+          </button>
+        </div>
+
+        <div class="slider-row speed-row">
           <label for="speedSlider" class="field-label">
             Voice speed
           </label>
@@ -58,10 +110,10 @@
           <button id="backBtn" class="btn ghost">← Edit text</button>
 
           <div class="play-controls">
-            <button id="playBtn" class="btn circle" title="Play">
+            <button id="playBtn" class="btn circle" title="Play" type="button">
               ▶
             </button>
-            <button id="stopBtn" class="btn circle" title="Stop">
+            <button id="stopBtn" class="btn circle" title="Stop" type="button">
               ⏹
             </button>
           </div>
@@ -73,7 +125,15 @@
         </div>
 
         <div class="phonics-panel">
-          <h3>Sound it out</h3>
+          <div class="phonics-header-row">
+            <h3>Sound it out</h3>
+
+            <!-- Chunk mode toggle -->
+            <label class="field-label inline">
+              <input type="checkbox" id="chunkToggle" />
+              Chunk mode
+            </label>
+          </div>
 
           <label for="wordSlider" class="field-label">
             Move the orb word by word
@@ -98,9 +158,9 @@
             </div>
           </div>
 
-          <p class="hint small">
-            Tip: Mom can drag the slider slowly for the 3-year-old and a bit
-            faster for the 5-year-old.
+          <p class="hint small parent-tip">
+            Tip: Drag slowly for your 3-year-old. In <strong>Kid mode</strong>,
+            everything gets bigger and easier to tap.
           </p>
         </div>
       </section>

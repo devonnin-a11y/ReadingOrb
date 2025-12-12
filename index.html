@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Orb Reader – Kids Phonics</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b1f26" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <h1 class="logo">✨ Orb Reader</h1>
+      <p class="tagline">Type it. Watch it. Sound it out.</p>
+    </header>
+
+    <main>
+      <!-- Screen 1: Mom types the passage -->
+      <section id="setupScreen" class="screen active">
+        <h2>Create a reading passage</h2>
+        <p class="hint">
+          Type a sentence or short story for the kids to practice.
+        </p>
+
+        <label for="passageInput" class="field-label">
+          Text to practice
+        </label>
+        <textarea
+          id="passageInput"
+          rows="5"
+          placeholder="Example: The red cat sat on the big blue mat."
+        ></textarea>
+
+        <div class="slider-row">
+          <label for="speedSlider" class="field-label">
+            Voice speed
+          </label>
+          <input
+            type="range"
+            id="speedSlider"
+            min="0.5"
+            max="1.5"
+            step="0.1"
+            value="0.9"
+          />
+          <span id="speedValue" class="slider-value">0.9x</span>
+        </div>
+
+        <button id="startReadingBtn" class="btn primary">
+          Start Reading Mode ▶
+        </button>
+      </section>
+
+      <!-- Screen 2: Kids reading + orb + phonics slider -->
+      <section id="readingScreen" class="screen">
+        <div class="reading-top-bar">
+          <button id="backBtn" class="btn ghost">← Edit text</button>
+
+          <div class="play-controls">
+            <button id="playBtn" class="btn circle" title="Play">
+              ▶
+            </button>
+            <button id="stopBtn" class="btn circle" title="Stop">
+              ⏹
+            </button>
+          </div>
+        </div>
+
+        <div class="reading-area">
+          <div id="orb" class="orb"></div>
+          <p id="readingText" class="reading-text"></p>
+        </div>
+
+        <div class="phonics-panel">
+          <h3>Sound it out</h3>
+
+          <label for="wordSlider" class="field-label">
+            Move the orb word by word
+          </label>
+          <input
+            type="range"
+            id="wordSlider"
+            min="0"
+            max="0"
+            value="0"
+            step="1"
+          />
+
+          <div class="word-info">
+            <div>
+              <span class="word-label">Word:</span>
+              <span id="currentWordDisplay" class="word-value">–</span>
+            </div>
+            <div>
+              <span class="word-label">Phonics:</span>
+              <span id="phonicsDisplay" class="word-value">–</span>
+            </div>
+          </div>
+
+          <p class="hint small">
+            Tip: Mom can drag the slider slowly for the 3-year-old and a bit
+            faster for the 5-year-old.
+          </p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

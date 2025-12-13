@@ -3,6 +3,9 @@ Router.register("math", (view) => {
     <div class="card">
       <div class="big">➕ Math</div>
       <div class="muted">Pick the right level for the kid.</div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+        <button class="btn ghost" id="backHome" type="button">🏠 Back to Home</button>
+      </div>
     </div>
 
     <div class="grid2">
@@ -33,7 +36,8 @@ Router.register("math", (view) => {
     </div>
   `;
 
-  // 3yo dots
+  view.querySelector("#backHome").onclick = () => Router.go("home");
+
   let dotCount = 3;
   const dotsEl = view.querySelector("#dots");
   const setDots = () => { dotsEl.textContent = Array(dotCount).fill("●").join(" "); };
@@ -43,16 +47,12 @@ Router.register("math", (view) => {
     btn.onclick = () => {
       const ans = Number(btn.dataset.ans);
       if (ans === dotCount) {
-        Store.addStars(1);
-        updateProgressUI();
+        awardStar("Math counting");
         alert("✅ Nice counting! +⭐");
-      } else {
-        alert("Try again 🙂");
-      }
+      } else alert("Try again 🙂");
     };
   });
 
-  // 5yo add/sub
   const problemEl = view.querySelector("#problem");
   const answerEl = view.querySelector("#answer");
   let a=2,b=3,op="+";
@@ -71,13 +71,10 @@ Router.register("math", (view) => {
     const user = Number(answerEl.value);
     const correct = op === "+" ? (a+b) : (a-b);
     if (user === correct) {
-      Store.addStars(1);
-      updateProgressUI();
+      awardStar("Math correct");
       alert("🎉 Correct! +⭐");
       newProblem();
-    } else {
-      alert("Close! Try again 🙂");
-    }
+    } else alert("Close! Try again 🙂");
   };
 
   view.querySelector("#newQ").onclick = () => {

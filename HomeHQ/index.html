@@ -9,18 +9,36 @@
 <body>
   <div class="app" id="app"></div>
 
-  <!-- FX layer for confetti -->
+  <!-- FX layer (confetti) -->
   <div id="fxLayer" class="fx-layer"></div>
 
-  <!-- Home button -->
+  <!-- Floating Home button -->
   <button id="homeFab" class="home-fab" type="button" aria-label="Home">🏠</button>
 
-  <!-- IMPORTANT: core first -->
+  <!-- Parent PIN Overlay (STARTS HIDDEN) -->
+  <div id="pinOverlay" class="modal-overlay" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
+      <h3 id="pinTitle" class="modal-title">🔒 Parent Unlock</h3>
+      <p class="modal-text">Enter PIN to open Parent settings.</p>
+
+      <div class="pin-row">
+        <input id="pinInput" class="pin-input" inputmode="numeric" autocomplete="one-time-code"
+               placeholder="PIN" aria-label="PIN" />
+        <button id="pinUnlock" class="btn primary" type="button">Unlock</button>
+      </div>
+
+      <div class="modal-actions">
+        <button id="pinCancel" class="btn ghost" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Core FIRST -->
   <script defer src="js/core/store.js"></script>
   <script defer src="js/core/router.js"></script>
   <script defer src="js/core/rewards.js"></script>
 
-  <!-- modules next -->
+  <!-- Modules NEXT -->
   <script defer src="js/modules/home.js"></script>
   <script defer src="js/modules/reading.js"></script>
   <script defer src="js/modules/math.js"></script>
@@ -28,7 +46,7 @@
   <script defer src="js/modules/games.js"></script>
   <script defer src="js/modules/parent.js"></script>
 
-  <!-- app last -->
+  <!-- App LAST -->
   <script defer src="js/app.js"></script>
 </body>
 </html>

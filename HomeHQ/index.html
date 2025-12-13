@@ -8,31 +8,27 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <!-- Global FX (confetti / morph burst) -->
   <div id="fxLayer" class="fx-layer" aria-hidden="true"></div>
 
-  <!-- Parent Lock Modal -->
   <div id="pinOverlay" class="modal-overlay" hidden>
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
       <h3 id="pinTitle" class="modal-title">🛡 Parent Lock</h3>
       <p class="modal-text">Enter PIN to open Parent Dashboard.</p>
 
       <div class="pin-row">
-        <input id="pinInput" class="pin-input" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="PIN" />
+        <input id="pinInput" class="pin-input" inputmode="numeric" maxlength="8" placeholder="PIN" />
         <button id="pinUnlock" class="btn primary" type="button">Unlock</button>
       </div>
 
       <div class="modal-actions">
         <button id="pinCancel" class="btn ghost" type="button">Cancel</button>
       </div>
-      <p class="hint small muted" style="margin-top:10px;">Default PIN: <span class="kbd">1234</span></p>
+
+      <p class="hint small muted" style="margin-top:10px;">PIN: <span class="kbd">0111</span></p>
     </div>
   </div>
 
-  <!-- Floating Home Button (always accessible) -->
-  <button id="homeFab" class="home-fab" type="button" title="Back to Home">
-    🏠
-  </button>
+  <button id="homeFab" class="home-fab" type="button" title="Back to Home">🏠</button>
 
   <div id="app" class="app">
     <header class="hq-header">
@@ -70,12 +66,12 @@
       </div>
     </section>
 
-    <!-- Sticky navigation (polish pass) -->
     <nav class="hq-nav sticky" aria-label="Navigation">
       <button data-route="home" class="nav-btn active" type="button">🏠 Home</button>
       <button data-route="reading" class="nav-btn" type="button">📖 Reading</button>
       <button data-route="math" class="nav-btn" type="button">➕ Math</button>
       <button data-route="coding" class="nav-btn" type="button">💻 Coding</button>
+      <button data-route="games" class="nav-btn" type="button">🎮 Games</button>
       <button data-route="parent" class="nav-btn" type="button">🛡 Parent</button>
     </nav>
 
@@ -90,6 +86,7 @@
   <script src="js/modules/reading.js"></script>
   <script src="js/modules/math.js"></script>
   <script src="js/modules/coding.js"></script>
+  <script src="js/modules/games.js"></script>
   <script src="js/modules/parent.js"></script>
 
   <script src="js/app.js"></script>

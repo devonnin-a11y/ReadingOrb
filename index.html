@@ -9,45 +9,63 @@
   <link rel="manifest" href="manifest.webmanifest" />
 </head>
 <body>
+  <!-- Confetti overlay -->
+  <div id="fxLayer" class="fx-layer" aria-hidden="true"></div>
+
+  <!-- Auto-star prompt modal -->
+  <div id="modalOverlay" class="modal-overlay" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h3 id="modalTitle" class="modal-title">⭐ Mission Check!</h3>
+      <p id="modalText" class="modal-text">Did they read it well?</p>
+      <div class="modal-actions">
+        <button id="modalNo" class="btn ghost" type="button">Not yet</button>
+        <button id="modalYes" class="btn primary" type="button">Yes! ⭐</button>
+      </div>
+    </div>
+  </div>
+
   <div class="app">
     <header class="app-header">
       <div class="header-main">
         <div>
           <h1 class="logo">✨ Orb Reader</h1>
-          <p class="tagline">
-            Type it. Watch it. Sound it out.
-          </p>
+          <p class="tagline">Type it. Watch it. Sound it out.</p>
 
-          <!-- Stars banner (achievement meter) -->
-          <div id="rewardBanner" class="reward-banner">
-            ⭐ Stars today: 0
-          </div>
-
-          <!-- Profiles for kids -->
+          <!-- Profiles -->
           <div class="profile-switch">
-            <button
-              type="button"
-              class="profile-btn active"
-              data-profile="Vhon"
-            >
+            <button type="button" class="profile-btn active" data-profile="Vhon">
               <img src="img/vhon.png" alt="Vhon" class="profile-avatar" />
               <span>Vhon</span>
             </button>
-            <button
-              type="button"
-              class="profile-btn"
-              data-profile="Vio"
-            >
+            <button type="button" class="profile-btn" data-profile="Vio">
               <img src="img/vio.png" alt="Vio" class="profile-avatar" />
               <span>Vio</span>
             </button>
+          </div>
+
+          <!-- Progress row -->
+          <div class="progress-row">
+            <div id="rewardBanner" class="reward-banner">⭐ Stars today: 0</div>
+            <div id="streakChip" class="streak-chip">🔥 Streak: 0</div>
+            <div id="levelChip" class="level-chip">⚡ Level 1</div>
+          </div>
+
+          <!-- Level bar -->
+          <div class="levelbar" aria-label="Level progress">
+            <div class="levelbar-label">
+              <span id="levelLabelLeft">Level 1</span>
+              <span id="levelLabelRight">0 / 10</span>
+            </div>
+            <div class="levelbar-track">
+              <div id="levelbarFill" class="levelbar-fill"></div>
+            </div>
           </div>
         </div>
 
         <!-- Parent / Kid mode toggle -->
         <div class="mode-toggle">
           <span id="modeLabel" class="mode-label">Parent mode</span>
-          <button id="modeToggle" class="toggle-pill" type="button">
+          <button id="modeToggle" class="toggle-pill" type="button" aria-label="Toggle Kid Mode">
             <span class="toggle-knob"></span>
           </button>
         </div>
@@ -55,78 +73,49 @@
     </header>
 
     <main>
-      <!-- Screen 1: Mom types the passage -->
+      <!-- Setup screen -->
       <section id="setupScreen" class="screen active">
         <h2>Create a reading passage</h2>
-        <p class="hint">
-          Type a sentence or short story for the kids to practice.
-        </p>
+        <p class="hint">Type a sentence or short story for the kids to practice.</p>
 
-        <label for="passageInput" class="field-label">
-          Text to practice
-        </label>
+        <label for="passageInput" class="field-label">Text to practice</label>
         <textarea
           id="passageInput"
           rows="5"
           placeholder="Example: The red cat sat on the big blue mat."
         ></textarea>
 
-        <!-- Quick preset passages -->
         <h3 class="preset-heading">Quick practice passages</h3>
-        <p class="hint small">
-          Tap one to auto-fill. You can still edit the text after.
-        </p>
+        <p class="hint small">Tap one to auto-fill. You can still edit the text after.</p>
 
         <div class="preset-list">
-          <button
-            type="button"
-            class="btn chip preset-btn"
-            data-passage="The cat sat on the mat. The dog sat on the log."
-          >
+          <button type="button" class="btn chip preset-btn"
+            data-passage="The cat sat on the mat. The dog sat on the log.">
             CVC – Cat and Dog
           </button>
 
-          <button
-            type="button"
-            class="btn chip preset-btn"
-            data-passage="I can hop. I can run. I can jump. I can have fun!"
-          >
+          <button type="button" class="btn chip preset-btn"
+            data-passage="I can hop. I can run. I can jump. I can have fun!">
             Action words – I can…
           </button>
 
-          <button
-            type="button"
-            class="btn chip preset-btn"
-            data-passage="The sun is hot. The sky is blue. The grass is green. I like you."
-          >
+          <button type="button" class="btn chip preset-btn"
+            data-passage="The sun is hot. The sky is blue. The grass is green. I like you.">
             Colors &amp; simple sentences
           </button>
 
-          <button
-            type="button"
-            class="btn chip preset-btn"
-            data-passage="Mom had a red pot. Dad had a big pan. We all had hot soup."
-          >
+          <button type="button" class="btn chip preset-btn"
+            data-passage="Mom had a red pot. Dad had a big pan. We all had hot soup.">
             5-year-old warmup
           </button>
         </div>
 
         <div class="slider-row speed-row">
-          <label for="speedSlider" class="field-label">
-            Voice speed
-          </label>
-          <input
-            type="range"
-            id="speedSlider"
-            min="0.5"
-            max="1.5"
-            step="0.1"
-            value="0.9"
-          />
+          <label for="speedSlider" class="field-label">Voice speed</label>
+          <input type="range" id="speedSlider" min="0.5" max="1.5" step="0.1" value="0.9" />
           <span id="speedValue" class="slider-value">0.9x</span>
         </div>
 
-        <!-- Voice selection (less robotic if a good voice exists on device) -->
         <div class="slider-row voice-row">
           <label for="voiceSelect" class="field-label">Voice</label>
           <select id="voiceSelect" class="select">
@@ -134,23 +123,17 @@
           </select>
         </div>
 
-        <button id="startReadingBtn" class="btn primary">
-          Start Reading Mode ▶
-        </button>
+        <button id="startReadingBtn" class="btn primary">Start Reading Mode ▶</button>
       </section>
 
-      <!-- Screen 2: Kids reading + orb + phonics slider -->
+      <!-- Reading screen -->
       <section id="readingScreen" class="screen">
         <div class="reading-top-bar">
           <button id="backBtn" class="btn ghost">← Edit text</button>
 
           <div class="play-controls">
-            <button id="playBtn" class="btn circle" title="Play" type="button">
-              ▶
-            </button>
-            <button id="stopBtn" class="btn circle" title="Stop" type="button">
-              ⏹
-            </button>
+            <button id="playBtn" class="btn circle" title="Play" type="button">▶</button>
+            <button id="stopBtn" class="btn circle" title="Stop" type="button">⏹</button>
           </div>
         </div>
 
@@ -158,18 +141,14 @@
           <!-- Character panel -->
           <div class="character-panel">
             <div class="character-card">
-              <img
-                id="characterImage"
-                src="img/vhon.png"
-                alt="Current reader character"
-                class="character-img"
-              />
+              <img id="characterImage" src="img/vhon.png" alt="Current reader character" class="character-img" />
             </div>
           </div>
 
           <!-- Text + orb panel -->
-          <div class="reading-area">
-            <div id="orb" class="orb"></div>
+          <div class="reading-area" id="readingArea">
+            <div id="beam" class="beam" aria-hidden="true"></div>
+            <div id="orb" class="orb" aria-hidden="true"></div>
             <p id="readingText" class="reading-text"></p>
           </div>
         </div>
@@ -177,25 +156,14 @@
         <div class="phonics-panel">
           <div class="phonics-header-row">
             <h3>Sound it out</h3>
-
-            <!-- Chunk mode toggle -->
             <label class="field-label inline">
               <input type="checkbox" id="chunkToggle" />
               Chunk mode
             </label>
           </div>
 
-          <label for="wordSlider" class="field-label">
-            Move the orb word by word
-          </label>
-          <input
-            type="range"
-            id="wordSlider"
-            min="0"
-            max="0"
-            value="0"
-            step="1"
-          />
+          <label for="wordSlider" class="field-label">Move the orb word by word</label>
+          <input type="range" id="wordSlider" min="0" max="0" value="0" step="1" />
 
           <div class="word-info">
             <div>
@@ -208,11 +176,8 @@
             </div>
           </div>
 
-          <!-- Achievement button -->
           <div class="reward-row">
-            <button id="rewardBtn" class="btn chip reward-btn" type="button">
-              ⭐ They did great!
-            </button>
+            <button id="rewardBtn" class="btn chip reward-btn" type="button">⭐ They did great!</button>
           </div>
 
           <p class="hint small parent-tip">

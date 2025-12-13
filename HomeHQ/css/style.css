@@ -303,3 +303,42 @@ body{
   font-size:.95rem;
 }
 
+/* --- Incorrect feedback (shake) --- */
+@keyframes shakeX {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+  100% { transform: translateX(0); }
+}
+.shake {
+  animation: shakeX 300ms ease-in-out;
+}
+
+/* --- Hint blink / pulse --- */
+@keyframes hintBlink {
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.08); filter: brightness(1.35); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+.blink {
+  animation: hintBlink 420ms ease-in-out 2;
+}
+
+/* --- Toast (Mission Check) safety: always dismissible --- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 86px;
+  transform: translateX(-50%);
+  z-index: 9998;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.55);
+  border: 1px solid rgba(255,255,255,.18);
+  color: #fff;
+  font-weight: 900;
+  backdrop-filter: blur(8px);
+}
+.toast[hidden] { display:none !important; }

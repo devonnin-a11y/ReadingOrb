@@ -1,94 +1,34 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Home HQ</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0b1829" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>HomeHQ</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <div id="fxLayer" class="fx-layer" aria-hidden="true"></div>
+  <div class="app" id="app"></div>
 
-  <div id="pinOverlay" class="modal-overlay" hidden>
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
-      <h3 id="pinTitle" class="modal-title">🛡 Parent Lock</h3>
-      <p class="modal-text">Enter PIN to open Parent Dashboard.</p>
+  <!-- FX layer for confetti -->
+  <div id="fxLayer" class="fx-layer"></div>
 
-      <div class="pin-row">
-        <input id="pinInput" class="pin-input" inputmode="numeric" maxlength="8" placeholder="PIN" />
-        <button id="pinUnlock" class="btn primary" type="button">Unlock</button>
-      </div>
+  <!-- Home button -->
+  <button id="homeFab" class="home-fab" type="button" aria-label="Home">🏠</button>
 
-      <div class="modal-actions">
-        <button id="pinCancel" class="btn ghost" type="button">Cancel</button>
-      </div>
+  <!-- IMPORTANT: core first -->
+  <script defer src="js/core/store.js"></script>
+  <script defer src="js/core/router.js"></script>
+  <script defer src="js/core/rewards.js"></script>
 
-      <p class="hint small muted" style="margin-top:10px;">PIN: <span class="kbd">0111</span></p>
-    </div>
-  </div>
+  <!-- modules next -->
+  <script defer src="js/modules/home.js"></script>
+  <script defer src="js/modules/reading.js"></script>
+  <script defer src="js/modules/math.js"></script>
+  <script defer src="js/modules/coding.js"></script>
+  <script defer src="js/modules/games.js"></script>
+  <script defer src="js/modules/parent.js"></script>
 
-  <button id="homeFab" class="home-fab" type="button" title="Back to Home">🏠</button>
-
-  <div id="app" class="app">
-    <header class="hq-header">
-      <div class="hq-title">
-        🏡 <strong>Home HQ</strong>
-        <span class="subtitle">Missions • Stars • Streaks</span>
-      </div>
-
-      <div class="profile-switch" aria-label="Profiles">
-        <button class="profile-btn active" data-profile="Vhon" type="button">
-          <img src="img/vhon.png" alt="Vhon" />
-          <span>Vhon</span>
-        </button>
-        <button class="profile-btn" data-profile="Vio" type="button">
-          <img src="img/vio.png" alt="Vio" />
-          <span>Vio</span>
-        </button>
-      </div>
-    </header>
-
-    <section class="progress-bar" aria-label="Progress">
-      <div id="starsChip" class="chip">⭐ 0</div>
-      <div id="streakChip" class="chip">🔥 0</div>
-      <div id="levelChip" class="chip">⚡ Lv 1</div>
-      <div id="badgeChip" class="chip">🏅 0</div>
-    </section>
-
-    <section class="levelbar" aria-label="Level progress">
-      <div class="levelbar-label">
-        <span id="levelLeft">Level 1</span>
-        <span id="levelRight">0 / 10</span>
-      </div>
-      <div class="levelbar-track">
-        <div id="levelFill" class="levelbar-fill"></div>
-      </div>
-    </section>
-
-    <nav class="hq-nav sticky" aria-label="Navigation">
-      <button data-route="home" class="nav-btn active" type="button">🏠 Home</button>
-      <button data-route="reading" class="nav-btn" type="button">📖 Reading</button>
-      <button data-route="math" class="nav-btn" type="button">➕ Math</button>
-      <button data-route="coding" class="nav-btn" type="button">💻 Coding</button>
-      <button data-route="games" class="nav-btn" type="button">🎮 Games</button>
-      <button data-route="parent" class="nav-btn" type="button">🛡 Parent</button>
-    </nav>
-
-    <main id="view" class="view" aria-live="polite"></main>
-  </div>
-
-  <script src="js/core/store.js"></script>
-  <script src="js/core/router.js"></script>
-  <script src="js/core/rewards.js"></script>
-
-  <script src="js/modules/home.js"></script>
-  <script src="js/modules/reading.js"></script>
-  <script src="js/modules/math.js"></script>
-  <script src="js/modules/coding.js"></script>
-  <script src="js/modules/games.js"></script>
-  <script src="js/modules/parent.js"></script>
-
-  <script src="js/app.js"></script>
+  <!-- app last -->
+  <script defer src="js/app.js"></script>
 </body>
 </html>

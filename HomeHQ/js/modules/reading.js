@@ -3,7 +3,7 @@ Router.register("reading", (view) => {
     <h2>📖 Reading</h2>
     <p>Practice phonics, sentences, and stories.</p>
 
-    <a href="../ReadingOrb/index.html" class="launch-btn">
+    <a href="../" class="launch-btn">
       Launch Reading Orb →
     </a>
   `;

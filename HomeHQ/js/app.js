@@ -1,7 +1,8 @@
+// App bootstrap
 Store.load();
 updateProgressUI();
 
-// Floating Home button always works
+// Home FAB
 document.getElementById("homeFab").onclick = () => Router.go("home");
 
 // Profile switching
@@ -18,19 +19,21 @@ document.querySelectorAll(".profile-btn").forEach(btn => {
   };
 });
 
-// Parent Lock modal elements
+// Parent PIN modal
 const pinOverlay = document.getElementById("pinOverlay");
-const pinInput = document.getElementById("pinInput");
-const pinUnlock = document.getElementById("pinUnlock");
-const pinCancel = document.getElementById("pinCancel");
+const pinInput   = document.getElementById("pinInput");
+const pinUnlock  = document.getElementById("pinUnlock");
+const pinCancel  = document.getElementById("pinCancel");
 
-// Force hidden on load (belt + suspenders)
+const PARENT_PIN = "0111";
+
+// ALWAYS hidden on load
 pinOverlay.hidden = true;
 
 function openPinModal() {
   pinInput.value = "";
   pinOverlay.hidden = false;
-  setTimeout(() => pinInput.focus(), 50);
+  setTimeout(() => pinInput.focus(), 30);
 }
 
 function closePinModal() {
@@ -38,7 +41,7 @@ function closePinModal() {
   pinInput.value = "";
 }
 
-// Close if clicking background (not the card)
+// click outside card closes
 pinOverlay.addEventListener("click", (e) => {
   if (e.target === pinOverlay) closePinModal();
 });
@@ -47,18 +50,24 @@ pinCancel.onclick = () => closePinModal();
 
 pinUnlock.onclick = () => {
   const entered = String(pinInput.value || "").trim();
-  if (entered === Store.getParentPin()) {
+  if (entered === PARENT_PIN) {
     closePinModal();
-    // Route AFTER close so overlay never sticks
+    // route AFTER overlay is hidden (prevents “stuck overlay”)
     requestAnimationFrame(() => Router.go("parent"));
   } else {
-    alert("Wrong PIN 🙂");
+    showToast?.("❌ Wrong PIN", 900);
+    // shake the card for feedback
+    const card = pinOverlay.querySelector(".modal-card");
+    card?.classList.remove("shake");
+    void card?.offsetWidth;
+    card?.classList.add("shake");
     pinInput.focus();
   }
 };
 
 pinInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") pinUnlock.click();
+  if (e.key === "Escape") closePinModal();
 });
 
 // Navigation
@@ -66,7 +75,7 @@ document.querySelectorAll(".nav-btn").forEach(btn => {
   btn.onclick = () => {
     const route = btn.dataset.route;
 
-    // PIN gate ONLY for Parent tab
+    // ONLY gate the Parent tab
     if (route === "parent") {
       openPinModal();
       return;

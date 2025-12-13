@@ -4,7 +4,7 @@ Router.register("games", (view) => {
       <div class="big">🎮 Games</div>
       <div class="muted">Memory + problem solving + fun.</div>
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-        <button class="btn primary" id="maze" type="button">🧩 Random Maze</button>
+        <button class="btn primary" id="maze" type="button">🧩 Kid Maze</button>
         <button class="btn primary" id="match" type="button">🃏 Match Cards</button>
         <button class="btn primary" id="seq" type="button">🧠 Memory Sequence</button>
         <button class="btn ghost" id="home" type="button">🏠 Back</button>
@@ -17,66 +17,77 @@ Router.register("games", (view) => {
   const area = view.querySelector("#gameArea");
   view.querySelector("#home").onclick = () => Router.go("home");
 
-  view.querySelector("#maze").onclick = () => renderMaze(area);
+  view.querySelector("#maze").onclick = () => renderKidMaze(area);
   view.querySelector("#match").onclick = () => renderMatch(area);
   view.querySelector("#seq").onclick = () => renderSequence(area);
 
-  // default
-  renderMaze(area);
+  renderKidMaze(area);
 });
 
-/* ------------------ MAZE GAME ------------------ */
-function renderMaze(area){
+/* ------------------ KID MAZE (SIMPLER) ------------------ */
+function renderKidMaze(area){
   area.innerHTML = `
     <div class="card">
-      <div class="big">🧩 Random Maze Escape</div>
-      <div class="muted">Use blocks to move: Up / Down / Left / Right → reach the ⭐ exit.</div>
+      <div class="big">🧩 Kid Maze Escape</div>
+      <div class="muted">
+        Add moves with the big arrows → press Run → reach the ⭐.
+      </div>
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-        <button class="btn ghost" id="newMaze" type="button">🔁 New Maze</button>
-        <button class="btn primary" id="run" type="button">▶ Run Moves</button>
+        <button class="btn ghost" id="newMaze" type="button">🔁 New</button>
+        <button class="btn primary" id="run" type="button">▶ Run</button>
         <button class="btn ghost" id="clear" type="button">🧹 Clear</button>
-        <button class="btn primary" id="star" type="button">⭐ Award Star</button>
+        <button class="btn ghost" id="award" type="button">⭐ Award</button>
       </div>
     </div>
 
-    <div class="grid2">
+    <!-- Layout that keeps arrows + list + maze visible -->
+    <div class="kidMazeLayout">
       <div class="card">
-        <div class="big">Blocks</div>
-        <div class="muted">Tap to add to your move list.</div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-          <button class="btn primary" data-m="U" type="button">⬆ Up</button>
-          <button class="btn primary" data-m="D" type="button">⬇ Down</button>
-          <button class="btn primary" data-m="L" type="button">⬅ Left</button>
-          <button class="btn primary" data-m="R" type="button">➡ Right</button>
+        <div class="big">Big Arrows</div>
+        <div class="muted">Tap to add moves.</div>
+
+        <div class="arrowPad" style="margin-top:10px;">
+          <button class="arrowBtn" data-m="U" type="button">⬆</button>
+          <div class="arrowRow">
+            <button class="arrowBtn" data-m="L" type="button">⬅</button>
+            <button class="arrowBtn" data-m="D" type="button">⬇</button>
+            <button class="arrowBtn" data-m="R" type="button">➡</button>
+          </div>
         </div>
+
         <p class="hint small muted">Tip: Tap a move in the list to remove it.</p>
+
+        <div class="big" style="margin-top:10px;">Move List</div>
+        <div id="list" class="block-program" style="min-height:120px; max-height:240px; overflow:auto;"></div>
       </div>
 
       <div class="card">
-        <div class="big">Move List</div>
-        <div id="list" class="block-program" style="min-height:120px;"></div>
+        <div class="big">Maze</div>
+        <div class="muted">Watch the blue square move.</div>
+        <div id="mazeWrap" class="mazeWrap"></div>
       </div>
-    </div>
-
-    <div class="card">
-      <div id="mazeWrap" style="overflow:auto;"></div>
     </div>
   `;
 
-  area.querySelector("#star").onclick = () => awardStar("Maze award");
-
-  // Maze generation
-  const W = 12, H = 12; // good size for kids
-  const maze = genMaze(W, H);
-  let player = {x:0,y:0};
-  const exit = {x:W-1,y:H-1};
+  area.querySelector("#award").onclick = () => awardStar("Kid maze award");
 
   const listEl = area.querySelector("#list");
   const wrap = area.querySelector("#mazeWrap");
 
-  function draw(){
-    wrap.innerHTML = buildMazeHTML(maze, W, H, player, exit);
-  }
+  // Smaller maze + simpler generation:
+  // 6x6 feels manageable for kids.
+  const W = 6, H = 6;
+
+  // Generate a "perfect maze" then carve extra openings to reduce dead ends
+  let maze = genMaze(W, H);
+
+  // Soften difficulty: remove some random walls (more open, fewer traps)
+  softenMaze(maze, W, H, 10);
+
+  let player = {x:0,y:0};
+  const exit = {x:W-1,y:H-1};
+
+  const draw = () => { wrap.innerHTML = buildMazeHTML(maze, W, H, player, exit, 44); };
   draw();
 
   // Add moves
@@ -85,19 +96,34 @@ function renderMaze(area){
       const m = btn.dataset.m;
       const chip = document.createElement("div");
       chip.className = "block";
-      chip.textContent = m==="U"?"⬆":m==="D"?"⬇":m==="L"?"⬅":"➡";
       chip.dataset.m = m;
+      chip.textContent = m==="U"?"⬆":m==="D"?"⬇":m==="L"?"⬅":"➡";
+      chip.style.fontSize = "1.2rem";
+      chip.style.padding = "10px 12px";
       chip.onclick = ()=>chip.remove();
       listEl.appendChild(chip);
+
+      // keep list scrolled to the bottom so kids see the newest move
+      listEl.scrollTop = listEl.scrollHeight;
     };
   });
 
   area.querySelector("#clear").onclick = ()=> listEl.innerHTML = "";
-  area.querySelector("#newMaze").onclick = ()=> renderMaze(area);
+
+  area.querySelector("#newMaze").onclick = ()=>{
+    maze = genMaze(W, H);
+    softenMaze(maze, W, H, 10);
+    player = {x:0,y:0};
+    listEl.innerHTML = "";
+    draw();
+  };
 
   area.querySelector("#run").onclick = async ()=>{
     const moves = Array.from(listEl.querySelectorAll(".block")).map(b=>b.dataset.m);
     if (!moves.length) return alert("Add moves first 🙂");
+
+    // Focus/scroll to the maze so they can watch it move
+    wrap.scrollIntoView({behavior:"smooth", block:"center"});
 
     for (const m of moves){
       const nxt = {x:player.x, y:player.y};
@@ -107,18 +133,24 @@ function renderMaze(area){
       if (m==="R") nxt.x++;
 
       // bounds
-      if (nxt.x<0||nxt.y<0||nxt.x>=W||nxt.y>=H){ await wait(150); continue; }
+      if (nxt.x<0||nxt.y<0||nxt.x>=W||nxt.y>=H){
+        await wait(140);
+        continue;
+      }
 
       // walls
-      if (isBlocked(maze, player, nxt)) { await wait(150); continue; }
+      if (isBlocked(maze, player, nxt)){
+        await wait(140);
+        continue;
+      }
 
       player = nxt;
       draw();
-      await wait(160);
+      await wait(220);
 
       if (player.x===exit.x && player.y===exit.y){
-        awardStar("Maze win");
-        alert("🎉 You escaped the maze! +⭐");
+        awardStar("Kid maze win");
+        alert("🎉 You escaped! +⭐");
         break;
       }
     }
@@ -155,9 +187,26 @@ function genMaze(w,h){
     stack.push({x:pick.nx,y:pick.ny});
   }
 
-  // clear vis flags
   for (let y=0;y<h;y++) for (let x=0;x<w;x++) cells[y][x].vis=false;
   return cells;
+}
+
+// Remove a handful of random walls to make it more open / kid friendly
+function softenMaze(maze, w, h, openings=8){
+  const rand = (n)=>Math.floor(Math.random()*n);
+  for (let i=0;i<openings;i++){
+    const x = rand(w);
+    const y = rand(h);
+    const dirs = ["N","E","S","W"];
+    const d = dirs[rand(dirs.length)];
+    const c = maze[y][x];
+
+    // Try to open wall if neighbor exists
+    if (d==="N" && y>0){ c.N=false; maze[y-1][x].S=false; }
+    if (d==="S" && y<h-1){ c.S=false; maze[y+1][x].N=false; }
+    if (d==="W" && x>0){ c.W=false; maze[y][x-1].E=false; }
+    if (d==="E" && x<w-1){ c.E=false; maze[y][x+1].W=false; }
+  }
 }
 
 function isBlocked(maze, from, to){
@@ -171,11 +220,8 @@ function isBlocked(maze, from, to){
   return true;
 }
 
-function buildMazeHTML(maze,w,h,player,exit){
-  const cellSize = 28;
-  let html = `<div style="display:inline-block; background:rgba(0,0,0,.15); border-radius:14px; padding:10px;">`;
-  html += `<div style="display:grid; grid-template-columns:repeat(${w}, ${cellSize}px);">`;
-
+function buildMazeHTML(maze,w,h,player,exit,cellSize=44){
+  let html = `<div class="mazeBoard" style="grid-template-columns:repeat(${w}, ${cellSize}px);">`;
   for(let y=0;y<h;y++){
     for(let x=0;x<w;x++){
       const c = maze[y][x];
@@ -183,27 +229,28 @@ function buildMazeHTML(maze,w,h,player,exit){
       const isE = (x===exit.x && y===exit.y);
 
       const content = isP ? "🟦" : (isE ? "⭐" : "");
-      const bg = isP ? "rgba(99,179,255,.28)" : (isE ? "rgba(255,201,75,.22)" : "rgba(255,255,255,.04)");
+      const bg = isP ? "rgba(99,179,255,.30)" : (isE ? "rgba(255,201,75,.24)" : "rgba(255,255,255,.05)");
 
       const style = `
         width:${cellSize}px;height:${cellSize}px;
         display:flex;align-items:center;justify-content:center;
-        font-weight:900;
+        font-weight:1000;
+        font-size:1.1rem;
         background:${bg};
-        border-top:${c.N ? "2px solid rgba(220,245,255,.55)" : "2px solid transparent"};
-        border-right:${c.E ? "2px solid rgba(220,245,255,.55)" : "2px solid transparent"};
-        border-bottom:${c.S ? "2px solid rgba(220,245,255,.55)" : "2px solid transparent"};
-        border-left:${c.W ? "2px solid rgba(220,245,255,.55)" : "2px solid transparent"};
+        border-top:${c.N ? "3px solid rgba(220,245,255,.60)" : "3px solid transparent"};
+        border-right:${c.E ? "3px solid rgba(220,245,255,.60)" : "3px solid transparent"};
+        border-bottom:${c.S ? "3px solid rgba(220,245,255,.60)" : "3px solid transparent"};
+        border-left:${c.W ? "3px solid rgba(220,245,255,.60)" : "3px solid transparent"};
+        border-radius:10px;
       `;
       html += `<div style="${style}">${content}</div>`;
     }
   }
-
-  html += `</div></div>`;
+  html += `</div>`;
   return html;
 }
 
-/* ------------------ MATCH CARDS ------------------ */
+/* ------------------ MATCH CARDS (unchanged) ------------------ */
 function renderMatch(area){
   area.innerHTML = `
     <div class="card">
@@ -252,7 +299,6 @@ function renderMatch(area){
   const boardEl = area.querySelector("#board");
 
   function start(n){
-    // ensure even number of cards: if odd grid, we’ll remove 1 card spot
     const total = n*n;
     const usable = (total % 2 === 0) ? total : total - 1;
     const pairs = usable / 2;
@@ -269,12 +315,11 @@ function renderMatch(area){
     let lock = false;
     let matched = 0;
 
-    const cols = n;
     boardEl.innerHTML = `
-      <div style="display:grid; grid-template-columns:repeat(${cols}, 1fr); gap:8px;">
+      <div style="display:grid; grid-template-columns:repeat(${n}, 1fr); gap:8px;">
         ${Array.from({length: usable}).map((_,i)=>`
           <button class="cardBtn" data-i="${i}" type="button"
-            style="height:${Math.max(42, 320/n)}px; border-radius:14px; border:1px solid rgba(166,220,255,.2); background:rgba(0,0,0,.25); color:#fff; font-size:${Math.max(16, 44 - n*2)}px; font-weight:900; cursor:pointer;">
+            style="height:${Math.max(44, 320/n)}px; border-radius:14px; border:1px solid rgba(166,220,255,.2); background:rgba(0,0,0,.25); color:#fff; font-size:${Math.max(16, 44 - n*2)}px; font-weight:1000; cursor:pointer;">
             ?
           </button>
         `).join("")}
@@ -296,7 +341,6 @@ function renderMatch(area){
           return;
         }
 
-        // second click
         if (first.textContent === btn.textContent){
           matched += 2;
           first.style.opacity = "0.7";
@@ -327,7 +371,7 @@ function renderMatch(area){
   start(5);
 }
 
-/* ------------------ MEMORY SEQUENCE ------------------ */
+/* ------------------ MEMORY SEQUENCE (BETTER HIGHLIGHT) ------------------ */
 function renderSequence(area){
   area.innerHTML = `
     <div class="card">
@@ -337,15 +381,14 @@ function renderSequence(area){
         <button class="btn primary" id="start" type="button">▶ Start</button>
         <button class="btn ghost" id="award" type="button">⭐ Award Star</button>
       </div>
+      <p class="hint small muted">Bigger glow + stronger flash.</p>
     </div>
 
     <div class="card">
       <div class="muted">Level: <strong id="lvl">1</strong></div>
-      <div id="pad" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin-top:10px;">
+      <div id="pad" class="simonPad">
         ${["A","B","C","D"].map(k=>`
-          <button class="btn primary" data-k="${k}" type="button" style="height:90px; font-size:1.4rem;">
-            ${k}
-          </button>
+          <button class="simonBtn" data-k="${k}" type="button">${k}</button>
         `).join("")}
       </div>
       <p class="hint small muted">Clearing levels awards ⭐.</p>
@@ -355,7 +398,7 @@ function renderSequence(area){
   area.querySelector("#award").onclick = () => awardStar("Sequence award");
 
   const lvlEl = area.querySelector("#lvl");
-  const buttons = Array.from(area.querySelectorAll("[data-k]"));
+  const buttons = Array.from(area.querySelectorAll(".simonBtn"));
   const keys = ["A","B","C","D"];
 
   let seq = [];
@@ -363,17 +406,14 @@ function renderSequence(area){
   let level = 1;
   let locked = false;
 
-  function flash(k){
+  const flash = async (k)=>{
     const btn = buttons.find(b=>b.dataset.k===k);
-    if(!btn) return Promise.resolve();
-    btn.style.transform = "scale(1.03)";
-    btn.style.filter = "brightness(1.35)";
-    return wait(280).then(()=>{
-      btn.style.transform = "";
-      btn.style.filter = "";
-      return wait(80);
-    });
-  }
+    if(!btn) return;
+    btn.classList.add("flash");
+    await wait(420);
+    btn.classList.remove("flash");
+    await wait(120);
+  };
 
   async function playSeq(){
     locked = true;
@@ -404,6 +444,7 @@ function renderSequence(area){
     btn.onclick = async ()=>{
       if (locked || !seq.length) return;
       const k = btn.dataset.k;
+
       input.push(k);
       await flash(k);
 

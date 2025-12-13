@@ -273,3 +273,33 @@ body{
   transform:scale(1.05);
   filter:brightness(1.4);
 }
+
+/* --- Hint UI --- */
+.hintBanner{
+  padding:10px;
+  border-radius:14px;
+  border:1px solid rgba(166,220,255,.16);
+  background:rgba(0,0,0,.14);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.hintArrow{
+  width:64px;
+  height:64px;
+  border-radius:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:2.2rem;
+  font-weight:1000;
+  background:linear-gradient(135deg,var(--bolt),var(--accent));
+  color:#04101f;
+  box-shadow:0 10px 22px rgba(0,0,0,.35);
+}
+.hintText{
+  flex:1;
+  font-size:.95rem;
+}
+

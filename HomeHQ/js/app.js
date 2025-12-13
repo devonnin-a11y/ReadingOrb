@@ -1,14 +1,13 @@
 Store.load();
 updateProgressUI();
 
-// Floating home button: always works
+// Floating Home button always works
 document.getElementById("homeFab").onclick = () => Router.go("home");
 
 // Profile switching
 document.querySelectorAll(".profile-btn").forEach(btn => {
   btn.onclick = () => {
-    const name = btn.dataset.profile;
-    Store.setActive(name);
+    Store.setActive(btn.dataset.profile);
 
     document.querySelectorAll(".profile-btn")
       .forEach(b => b.classList.toggle("active", b === btn));
@@ -19,13 +18,11 @@ document.querySelectorAll(".profile-btn").forEach(btn => {
   };
 });
 
-// Parent Lock helpers
+// Parent Lock modal elements
 const pinOverlay = document.getElementById("pinOverlay");
 const pinInput = document.getElementById("pinInput");
 const pinUnlock = document.getElementById("pinUnlock");
 const pinCancel = document.getElementById("pinCancel");
-
-let pendingParentNav = false;
 
 function openPinModal() {
   pinInput.value = "";
@@ -35,8 +32,13 @@ function openPinModal() {
 
 function closePinModal() {
   pinOverlay.hidden = true;
-  pendingParentNav = false;
+  pinInput.value = "";
 }
+
+// Close if clicking dim background (but not clicking inside modal)
+pinOverlay.addEventListener("click", (e) => {
+  if (e.target === pinOverlay) closePinModal();
+});
 
 pinCancel.onclick = () => closePinModal();
 
@@ -44,7 +46,8 @@ pinUnlock.onclick = () => {
   const entered = String(pinInput.value || "").trim();
   if (entered === Store.getParentPin()) {
     closePinModal();
-    Router.go("parent");
+    // Route AFTER close so it never “sticks”
+    setTimeout(() => Router.go("parent"), 0);
   } else {
     alert("Wrong PIN 🙂");
     pinInput.focus();
@@ -55,13 +58,13 @@ pinInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") pinUnlock.click();
 });
 
-// Nav
+// Navigation
 document.querySelectorAll(".nav-btn").forEach(btn => {
   btn.onclick = () => {
     const route = btn.dataset.route;
 
+    // PIN gate ONLY for parent tab
     if (route === "parent") {
-      pendingParentNav = true;
       openPinModal();
       return;
     }

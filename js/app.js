@@ -11,8 +11,10 @@ const backBtn = document.getElementById("backBtn");
 const playBtn = document.getElementById("playBtn");
 const stopBtn = document.getElementById("stopBtn");
 
+const readingArea = document.getElementById("readingArea");
 const readingText = document.getElementById("readingText");
 const orb = document.getElementById("orb");
+const beam = document.getElementById("beam");
 
 const wordSlider = document.getElementById("wordSlider");
 const currentWordDisplay = document.getElementById("currentWordDisplay");
@@ -22,26 +24,42 @@ const chunkToggle = document.getElementById("chunkToggle");
 const modeToggle = document.getElementById("modeToggle");
 const modeLabel = document.getElementById("modeLabel");
 const presetButtons = document.querySelectorAll(".preset-btn");
+
 const voiceSelect = document.getElementById("voiceSelect");
+
 const rewardBanner = document.getElementById("rewardBanner");
+const streakChip = document.getElementById("streakChip");
+const levelChip = document.getElementById("levelChip");
+const levelLabelLeft = document.getElementById("levelLabelLeft");
+const levelLabelRight = document.getElementById("levelLabelRight");
+const levelbarFill = document.getElementById("levelbarFill");
+
 const rewardBtn = document.getElementById("rewardBtn");
 const profileButtons = document.querySelectorAll(".profile-btn");
+
 const characterImage = document.getElementById("characterImage");
 
-// State
+const fxLayer = document.getElementById("fxLayer");
+
+const modalOverlay = document.getElementById("modalOverlay");
+const modalYes = document.getElementById("modalYes");
+const modalNo = document.getElementById("modalNo");
+
+// App state
 let words = [];
 let currentIndex = 0;
-let isPlaying = false;      // for auto-play via Play button
+let isPlaying = false;
 let currentUtterance = null;
 
 let availableVoices = [];
 let selectedVoice = null;
 
-const STORAGE_KEY = "orbReaderProfiles_v1";
+const STORAGE_KEY = "orbReaderProfiles_v2";
 
+// Per-profile state stored
 let profiles = {
-  Vhon: { stars: 0 },
-  Vio: { stars: 0 }
+  Vhon: { stars: 0, streak: 0, lastStarISO: null },
+  Vio:  { stars: 0, streak: 0, lastStarISO: null }
 };
 let currentProfile = "Vhon";
 
@@ -50,80 +68,38 @@ const CHARACTER_IMAGES = {
   Vio: "img/vio.png"
 };
 
-// ---- Profile & storage helpers ----
+// Level system
+const STARS_PER_LEVEL = 10;
 
-function loadProfiles() {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (data) {
-      const parsed = JSON.parse(data);
-      if (parsed.profiles) profiles = parsed.profiles;
-      if (parsed.currentProfile) currentProfile = parsed.currentProfile;
-    }
-  } catch (e) {
-    console.warn("Could not load profiles", e);
-  }
+// Orb smoothing
+let orbAnimId = null;
+let orbX = 0, orbY = 0;         // current
+let targetX = 0, targetY = 0;   // target
+const ORB_EASE = 0.18;          // higher = snappier
 
-  // Ensure both profiles exist
-  if (!profiles.Vhon) profiles.Vhon = { stars: 0 };
-  if (!profiles.Vio) profiles.Vio = { stars: 0 };
+// ---------- Utilities ----------
+function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
 
-  updateProfileButtons();
-  updateCharacterImage();
-  updateRewardBanner();
+function todayISODateLocal() {
+  const d = new Date();
+  // local date string YYYY-MM-DD
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 }
 
-function saveProfiles() {
-  try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        currentProfile,
-        profiles
-      })
-    );
-  } catch (e) {
-    console.warn("Could not save profiles", e);
-  }
+function yesterdayISODateLocal() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 }
 
-function updateProfileButtons() {
-  profileButtons.forEach((btn) => {
-    const p = btn.dataset.profile;
-    btn.classList.toggle("active", p === currentProfile);
-  });
-}
-
-function updateCharacterImage() {
-  if (!characterImage) return;
-  const src = CHARACTER_IMAGES[currentProfile] || CHARACTER_IMAGES.Vhon;
-  characterImage.src = src;
-  characterImage.alt = currentProfile + " character";
-}
-
-function getCurrentStars() {
-  return profiles[currentProfile]?.stars ?? 0;
-}
-
-function setCurrentStars(value) {
-  if (!profiles[currentProfile]) profiles[currentProfile] = { stars: 0 };
-  profiles[currentProfile].stars = value;
-}
-
-// Update banner text + animation
-function updateRewardBanner() {
-  if (!rewardBanner) return;
-  const stars = getCurrentStars();
-  rewardBanner.textContent = `⭐ Stars today: ${stars}`;
-  rewardBanner.classList.remove("pop");
-  void rewardBanner.offsetWidth;
-  rewardBanner.classList.add("pop");
-}
-
-// ---- Screen switch ----
-
-function showScreen(screenName) {
-  if (screenName === "setup") {
+function showScreen(name) {
+  if (name === "setup") {
     setupScreen.classList.add("active");
     readingScreen.classList.remove("active");
   } else {
@@ -132,26 +108,198 @@ function showScreen(screenName) {
   }
 }
 
-// ---- Word rendering & highlighting ----
+function pop(el) {
+  if (!el) return;
+  el.classList.remove("pop");
+  void el.offsetWidth;
+  el.classList.add("pop");
+}
 
+// ---------- Profiles / storage ----------
+function loadProfiles() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.profiles) profiles = parsed.profiles;
+      if (parsed.currentProfile) currentProfile = parsed.currentProfile;
+    }
+  } catch (e) {
+    console.warn("Could not load profiles", e);
+  }
+
+  // Ensure shape
+  if (!profiles.Vhon) profiles.Vhon = { stars: 0, streak: 0, lastStarISO: null };
+  if (!profiles.Vio) profiles.Vio = { stars: 0, streak: 0, lastStarISO: null };
+
+  updateProfileButtons();
+  updateCharacterImage();
+  updateProgressUI();
+}
+
+function saveProfiles() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentProfile, profiles }));
+  } catch (e) {
+    console.warn("Could not save profiles", e);
+  }
+}
+
+function updateProfileButtons() {
+  profileButtons.forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.profile === currentProfile);
+  });
+}
+
+function updateCharacterImage() {
+  if (!characterImage) return;
+  const src = CHARACTER_IMAGES[currentProfile] || CHARACTER_IMAGES.Vhon;
+  characterImage.src = src;
+  characterImage.alt = `${currentProfile} character`;
+}
+
+function getP() { return profiles[currentProfile]; }
+
+function computeLevel(stars) {
+  const level = Math.floor(stars / STARS_PER_LEVEL) + 1;
+  const intoLevel = stars % STARS_PER_LEVEL;
+  return { level, intoLevel };
+}
+
+function updateProgressUI() {
+  const p = getP();
+  const { level, intoLevel } = computeLevel(p.stars);
+
+  if (rewardBanner) rewardBanner.textContent = `⭐ Stars today: ${p.stars}`;
+  if (streakChip) streakChip.textContent = `🔥 Streak: ${p.streak}`;
+  if (levelChip) levelChip.textContent = `⚡ Level ${level}`;
+
+  if (levelLabelLeft) levelLabelLeft.textContent = `Level ${level}`;
+  if (levelLabelRight) levelLabelRight.textContent = `${intoLevel} / ${STARS_PER_LEVEL}`;
+
+  if (levelbarFill) {
+    const pct = (intoLevel / STARS_PER_LEVEL) * 100;
+    levelbarFill.style.width = `${pct}%`;
+  }
+
+  pop(rewardBanner);
+}
+
+// ---------- Reward burst (confetti) ----------
+function rand(min, max) { return Math.random() * (max - min) + min; }
+
+function spawnMorphBurst() {
+  if (!fxLayer) return;
+
+  const colors = [
+    "rgba(99,179,255,0.95)",   // blue
+    "rgba(255,201,75,0.95)",   // yellow bolt
+    "rgba(255,75,106,0.95)",   // red
+    "rgba(255,255,255,0.9)"    // white sparkle
+  ];
+
+  const cx = Math.round(window.innerWidth * 0.5);
+  const cy = Math.round(window.innerHeight * 0.18);
+
+  const count = 28;
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement("div");
+    el.className = "fx";
+    el.style.background = colors[i % colors.length];
+
+    const x0 = `${cx}px`;
+    const y0 = `${cy}px`;
+
+    const dx = rand(-180, 180);
+    const dy = rand(-20, 220);
+
+    const x1 = `${cx + dx}px`;
+    const y1 = `${cy + dy}px`;
+
+    const r = `${rand(-540, 540)}deg`;
+
+    el.style.setProperty("--x0", x0);
+    el.style.setProperty("--y0", y0);
+    el.style.setProperty("--x1", x1);
+    el.style.setProperty("--y1", y1);
+    el.style.setProperty("--r", r);
+
+    el.style.left = `${cx}px`;
+    el.style.top = `${cy}px`;
+
+    // some are "bolts" (thin rectangles)
+    if (Math.random() < 0.35) {
+      el.style.width = "6px";
+      el.style.height = "18px";
+      el.style.borderRadius = "2px";
+    }
+
+    fxLayer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove());
+  }
+}
+
+// ---------- Streak rules ----------
+function applyStreakOnStar(p) {
+  const today = todayISODateLocal();
+  const yesterday = yesterdayISODateLocal();
+  const last = p.lastStarISO;
+
+  if (!last) {
+    p.streak = 1;
+  } else if (last === today) {
+    // same-day star: streak unchanged
+  } else if (last === yesterday) {
+    p.streak += 1;
+  } else {
+    p.streak = 1;
+  }
+
+  p.lastStarISO = today;
+}
+
+// Add star with effects + level-up callout
+function addStar({ withBurst = true } = {}) {
+  const p = getP();
+  const before = computeLevel(p.stars).level;
+
+  p.stars += 1;
+  applyStreakOnStar(p);
+
+  const after = computeLevel(p.stars).level;
+
+  updateProgressUI();
+  saveProfiles();
+
+  if (withBurst) spawnMorphBurst();
+
+  // Level-up pop
+  if (after > before) {
+    pop(levelChip);
+    pop(rewardBanner);
+    // Extra burst on level-up
+    spawnMorphBurst();
+  }
+}
+
+// ---------- Word rendering ----------
 function renderWords() {
   readingText.innerHTML = "";
-  words.forEach((word, index) => {
+  words.forEach((word, idx) => {
     const span = document.createElement("span");
     span.textContent = word;
     span.classList.add("word");
-    span.dataset.index = index;
+    span.dataset.index = String(idx);
     span.addEventListener("click", () => {
       stopSpeech();
-      setCurrentIndex(index);
-      // When a word is tapped, also sound it out
-      speakPhonicsForIndex(index);
+      setCurrentIndex(idx);
+      speakPhonicsForIndex(idx);
     });
     readingText.appendChild(span);
     readingText.appendChild(document.createTextNode(" "));
   });
 
-  if (words.length === 0) {
+  if (!words.length) {
     wordSlider.max = 0;
     setCurrentIndex(0);
   } else {
@@ -160,169 +308,211 @@ function renderWords() {
   }
 }
 
-// Rough chunking for "syllable-ish" groups
+// Chunkify for “syllable-ish” groups
 function chunkify(word) {
   const clean = word.toLowerCase().replace(/[^a-z]/g, "");
   if (!clean) return [word];
 
   const vowels = "aeiouy";
   const chunks = [];
-  let current = clean[0];
+  let cur = clean[0];
 
   for (let i = 1; i < clean.length; i++) {
-    const prevIsVowel = vowels.includes(clean[i - 1]);
-    const currIsVowel = vowels.includes(clean[i]);
-
-    if (prevIsVowel !== currIsVowel) {
-      chunks.push(current);
-      current = clean[i];
+    const prevV = vowels.includes(clean[i - 1]);
+    const curV = vowels.includes(clean[i]);
+    if (prevV !== curV) {
+      chunks.push(cur);
+      cur = clean[i];
     } else {
-      current += clean[i];
+      cur += clean[i];
     }
   }
-  chunks.push(current);
-
+  chunks.push(cur);
   return chunks;
 }
 
-// Highlight, move orb, build phonics UI
 function setCurrentIndex(index) {
-  if (words.length === 0) {
+  if (!words.length) {
     currentIndex = 0;
     currentWordDisplay.textContent = "–";
     phonicsDisplay.textContent = "–";
     return;
   }
 
-  if (index < 0) index = 0;
-  if (index >= words.length) index = words.length - 1;
-
+  index = clamp(index, 0, words.length - 1);
   currentIndex = index;
   wordSlider.value = index;
 
-  const wordSpans = readingText.querySelectorAll(".word");
-  wordSpans.forEach((span) => span.classList.remove("active"));
-  const activeSpan = wordSpans[index];
-  if (activeSpan) {
-    activeSpan.classList.add("active");
-    moveOrbToSpan(activeSpan);
+  const spans = readingText.querySelectorAll(".word");
+  spans.forEach((s) => s.classList.remove("active"));
+  const active = spans[index];
+  if (active) {
+    active.classList.add("active");
+    setOrbTargetFromSpan(active);
   }
 
   const word = words[index];
   currentWordDisplay.textContent = word;
 
-  // Clear and rebuild phonics display
   phonicsDisplay.innerHTML = "";
-
-  if (chunkToggle && chunkToggle.checked) {
+  if (chunkToggle.checked) {
     const chunks = chunkify(word);
-    chunks.forEach((chunk, idx) => {
-      const span = document.createElement("span");
-      span.textContent = chunk;
-      span.classList.add("chunk");
-      if (idx % 2 === 1) span.classList.add("chunk-alt");
-      phonicsDisplay.appendChild(span);
-
-      if (idx < chunks.length - 1) {
+    chunks.forEach((c, i) => {
+      const el = document.createElement("span");
+      el.textContent = c;
+      el.className = "chunk" + (i % 2 === 1 ? " chunk-alt" : "");
+      phonicsDisplay.appendChild(el);
+      if (i < chunks.length - 1) {
         const sep = document.createElement("span");
         sep.textContent = "/";
-        sep.classList.add("chunk-sep");
+        sep.className = "chunk-sep";
         phonicsDisplay.appendChild(sep);
       }
     });
   } else {
-    const letters = word.split("");
-    letters.forEach((letter, idx) => {
-      const span = document.createElement("span");
-      span.textContent = letter;
-      span.classList.add("letter-pill");
-      phonicsDisplay.appendChild(span);
-
-      if (idx < letters.length - 1) {
-        phonicsDisplay.appendChild(document.createTextNode(" "));
-      }
+    word.split("").forEach((ch, i) => {
+      const el = document.createElement("span");
+      el.textContent = ch;
+      el.className = "letter-pill";
+      phonicsDisplay.appendChild(el);
+      if (i < word.length - 1) phonicsDisplay.appendChild(document.createTextNode(" "));
     });
   }
 }
 
-// Orb under the active word
-function moveOrbToSpan(span) {
-  const areaRect = readingText.getBoundingClientRect();
-  const spanRect = span.getBoundingClientRect();
-
-  const x = spanRect.left + spanRect.width / 2 - areaRect.left;
-  const y = spanRect.bottom - areaRect.top + 10;
-
-  orb.style.transform = `translate(${x}px, ${y}px)`;
+// ---------- Orb smooth tracking + beam ----------
+function readingTextRect() {
+  return readingText.getBoundingClientRect();
 }
 
-// ---- Character speaking animation ----
+function setOrbTargetFromSpan(span) {
+  const area = readingTextRect();
+  const r = span.getBoundingClientRect();
 
-function startCharacterSpeaking() {
-  if (!characterImage) return;
-  characterImage.classList.add("speaking");
+  // Target point slightly under the word
+  targetX = (r.left + r.width / 2) - area.left;
+  targetY = (r.bottom) - area.top + 12;
+
+  // Turn beam on when we have a real target
+  if (beam) beam.classList.add("on");
 }
 
-function stopCharacterSpeaking() {
-  if (!characterImage) return;
-  characterImage.classList.remove("speaking");
+function ensureOrbAnimator() {
+  if (orbAnimId) return;
+  // initialize orb at current target for first time
+  orbX = targetX || 0;
+  orbY = targetY || 0;
+
+  const tick = () => {
+    // Ease orb position
+    orbX += (targetX - orbX) * ORB_EASE;
+    orbY += (targetY - orbY) * ORB_EASE;
+
+    // Place orb (note: orb CSS already includes translate(-50%, -50%) but we control via left/top)
+    // We'll set left/top in pixels within readingText coordinate system by using transform translate(x,y).
+    orb.style.transform = `translate(${orbX}px, ${orbY}px)`;
+
+    // Update beam: from orb to current active word position
+    updateBeam();
+
+    orbAnimId = requestAnimationFrame(tick);
+  };
+
+  orbAnimId = requestAnimationFrame(tick);
 }
 
-// ---- Speech helpers ----
+function updateBeam() {
+  if (!beam) return;
 
-function stopSpeech() {
-  if ("speechSynthesis" in window) {
-    window.speechSynthesis.cancel();
+  // Beam starts near orb center
+  const x0 = orbX;
+  const y0 = orbY - 10; // slightly above orb
+
+  // Find active word center
+  const active = readingText.querySelector(".word.active");
+  if (!active) {
+    beam.classList.remove("on");
+    return;
   }
+  const area = readingTextRect();
+  const r = active.getBoundingClientRect();
+  const x1 = (r.left + r.width / 2) - area.left;
+  const y1 = (r.top + r.height / 2) - area.top;
+
+  const dx = x1 - x0;
+  const dy = y1 - y0;
+
+  const dist = Math.max(6, Math.sqrt(dx * dx + dy * dy));
+  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+  beam.style.left = `${x0}px`;
+  beam.style.top = `${y0}px`;
+  beam.style.width = `${dist}px`;
+  beam.style.transform = `rotate(${angle}deg)`;
+
+  beam.classList.add("on");
+}
+
+// ---------- Character speaking animation ----------
+function startCharacterSpeaking() {
+  if (characterImage) characterImage.classList.add("speaking");
+}
+function stopCharacterSpeaking() {
+  if (characterImage) characterImage.classList.remove("speaking");
+}
+
+// ---------- Speech ----------
+function stopSpeech() {
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   isPlaying = false;
   currentUtterance = null;
   stopCharacterSpeaking();
 }
 
-// Auto-play one word at a time (Play button)
 function speakWord(index) {
   if (!("speechSynthesis" in window)) return;
   if (index < 0 || index >= words.length) return;
 
   const word = words[index];
-  const utterance = new SpeechSynthesisUtterance(word);
-  utterance.rate = parseFloat(speedSlider.value);
-  if (selectedVoice) utterance.voice = selectedVoice;
+  const u = new SpeechSynthesisUtterance(word);
+  u.rate = parseFloat(speedSlider.value);
+  if (selectedVoice) u.voice = selectedVoice;
 
   startCharacterSpeaking();
 
-  utterance.onend = () => {
+  u.onend = () => {
     if (!isPlaying) {
       stopCharacterSpeaking();
       return;
     }
-    const nextIndex = currentIndex + 1;
-    if (nextIndex < words.length) {
-      setCurrentIndex(nextIndex);
-      speakWord(nextIndex);
+    const next = currentIndex + 1;
+    if (next < words.length) {
+      setCurrentIndex(next);
+      speakWord(next);
     } else {
       isPlaying = false;
       stopCharacterSpeaking();
+      // Auto-star prompt after finishing playthrough
+      openAutoStarPrompt();
     }
   };
 
-  currentUtterance = utterance;
-  window.speechSynthesis.speak(utterance);
+  currentUtterance = u;
+  window.speechSynthesis.speak(u);
 }
 
-// Play a small sequence: e.g. "c a t" then "cat" or chunks then whole word
 function playSequence(parts) {
   if (!("speechSynthesis" in window)) return;
   if (!parts.length) return;
 
   const [first, ...rest] = parts;
-  const utter = new SpeechSynthesisUtterance(first);
-  utter.rate = parseFloat(speedSlider.value);
-  if (selectedVoice) utter.voice = selectedVoice;
+  const u = new SpeechSynthesisUtterance(first);
+  u.rate = parseFloat(speedSlider.value);
+  if (selectedVoice) u.voice = selectedVoice;
 
   startCharacterSpeaking();
 
-  utter.onend = () => {
+  u.onend = () => {
     if (!rest.length) {
       stopCharacterSpeaking();
       return;
@@ -330,32 +520,29 @@ function playSequence(parts) {
     playSequence(rest);
   };
 
-  currentUtterance = utter;
-  window.speechSynthesis.speak(utter);
+  currentUtterance = u;
+  window.speechSynthesis.speak(u);
 }
 
-// Sound-out for slider/word tap
 function speakPhonicsForIndex(index) {
   if (!("speechSynthesis" in window)) return;
   if (index < 0 || index >= words.length) return;
 
   const word = words[index];
-  let sequence = [];
 
-  if (chunkToggle && chunkToggle.checked) {
+  let sequence = [];
+  if (chunkToggle.checked) {
     const chunks = chunkify(word);
-    sequence = [...chunks, word]; // chunks then whole word
+    sequence = [...chunks, word];
   } else {
     const letters = word.split("");
-    const letterString = letters.join(" "); // "c a t"
-    sequence = [letterString, word];
+    sequence = [letters.join(" "), word];
   }
 
   playSequence(sequence);
 }
 
-// ---- Voice loading / selection ----
-
+// ---------- Voice selection ----------
 function populateVoices() {
   if (!("speechSynthesis" in window)) return;
 
@@ -364,57 +551,54 @@ function populateVoices() {
 
   voiceSelect.innerHTML = '<option value="">Auto (device default)</option>';
 
-  const englishVoices = availableVoices.filter(
-    (v) => v.lang && v.lang.toLowerCase().startsWith("en")
-  );
-
-  englishVoices.forEach((voice) => {
+  const en = availableVoices.filter(v => v.lang && v.lang.toLowerCase().startsWith("en"));
+  en.forEach(v => {
     const opt = document.createElement("option");
-    opt.value = voice.name;
-    opt.textContent = voice.name;
+    opt.value = v.name;
+    opt.textContent = v.name;
     voiceSelect.appendChild(opt);
   });
 
-  const preferredPatterns = /(Google US English|Microsoft.*Aria|Jenny|Neural)/i;
-  selectedVoice =
-    englishVoices.find((v) => preferredPatterns.test(v.name)) ||
-    englishVoices[0] ||
-    null;
-
-  if (selectedVoice) {
-    voiceSelect.value = selectedVoice.name;
-  } else {
-    voiceSelect.value = "";
-  }
+  // Prefer nicer voices if available
+  const preferred = /(Google US English|Microsoft.*Aria|Jenny|Neural)/i;
+  selectedVoice = en.find(v => preferred.test(v.name)) || en[0] || null;
+  voiceSelect.value = selectedVoice ? selectedVoice.name : "";
 }
 
-// ---- Events ----
+// ---------- Auto-star prompt ----------
+function openAutoStarPrompt() {
+  if (!modalOverlay) return;
+  modalOverlay.hidden = false;
+}
 
+function closeAutoStarPrompt() {
+  if (!modalOverlay) return;
+  modalOverlay.hidden = true;
+}
+
+// ---------- Events ----------
 speedSlider.addEventListener("input", () => {
   speedValue.textContent = `${speedSlider.value}x`;
 });
 
-// Mode toggle
 modeToggle.addEventListener("click", () => {
   const kidMode = !document.body.classList.contains("kid-mode");
   document.body.classList.toggle("kid-mode", kidMode);
   modeLabel.textContent = kidMode ? "Kid mode" : "Parent mode";
 });
 
-// Profile switching
 profileButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
-    const profile = btn.dataset.profile;
-    if (!profile || profile === currentProfile) return;
-    currentProfile = profile;
+    const p = btn.dataset.profile;
+    if (!p || p === currentProfile) return;
+    currentProfile = p;
     updateProfileButtons();
     updateCharacterImage();
-    updateRewardBanner();
+    updateProgressUI();
     saveProfiles();
   });
 });
 
-// Preset passages
 presetButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
     const passage = btn.dataset.passage || "";
@@ -423,25 +607,23 @@ presetButtons.forEach((btn) => {
   });
 });
 
-// Voice selection
-if (voiceSelect) {
-  voiceSelect.addEventListener("change", () => {
-    const selectedName = voiceSelect.value;
-    selectedVoice =
-      availableVoices.find((v) => v.name === selectedName) || null;
-  });
-}
+voiceSelect.addEventListener("change", () => {
+  const name = voiceSelect.value;
+  selectedVoice = availableVoices.find(v => v.name === name) || null;
+});
 
 startReadingBtn.addEventListener("click", () => {
-  const text = passageInput.value.trim();
+  const text = (passageInput.value || "").trim();
   if (!text) {
     alert("Type a sentence or tap a preset first 😊");
     return;
   }
-
   words = text.split(/\s+/);
   renderWords();
   showScreen("reading");
+
+  // Ensure orb animator running
+  ensureOrbAnimator();
 });
 
 backBtn.addEventListener("click", () => {
@@ -463,7 +645,6 @@ stopBtn.addEventListener("click", () => {
   setCurrentIndex(0);
 });
 
-// Slider: move orb, highlight word, AND sound it out
 wordSlider.addEventListener("input", () => {
   const index = parseInt(wordSlider.value, 10) || 0;
   stopSpeech();
@@ -471,27 +652,22 @@ wordSlider.addEventListener("input", () => {
   speakPhonicsForIndex(index);
 });
 
-// Reward button per profile
-if (rewardBtn) {
-  rewardBtn.addEventListener("click", () => {
-    const stars = getCurrentStars() + 1;
-    setCurrentStars(stars);
-    updateRewardBanner();
-    saveProfiles();
+rewardBtn.addEventListener("click", () => {
+  addStar({ withBurst: true });
+  pop(rewardBtn);
+});
 
-    rewardBtn.classList.remove("pop");
-    void rewardBtn.offsetWidth;
-    rewardBtn.classList.add("pop");
-  });
-}
+modalYes.addEventListener("click", () => {
+  addStar({ withBurst: true });
+  closeAutoStarPrompt();
+});
 
-// Init
+modalNo.addEventListener("click", () => {
+  closeAutoStarPrompt();
+});
+
+// ---------- Init ----------
 window.addEventListener("load", () => {
-  setTimeout(() => {
-    moveOrbToSpan(readingText.querySelector(".word") || readingText);
-  }, 300);
-
-  // Profiles
   loadProfiles();
 
   // Voices
@@ -499,4 +675,7 @@ window.addEventListener("load", () => {
     populateVoices();
     window.speechSynthesis.onvoiceschanged = populateVoices;
   }
+
+  // Initialize orb target once text exists (after render)
+  // (orb animator starts when reading starts)
 });

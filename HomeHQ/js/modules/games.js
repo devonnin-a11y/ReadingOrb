@@ -24,7 +24,7 @@ Router.register("games", (view) => {
   renderKidMaze(area);
 });
 
-/* ------------------ KID MAZE (SIMPLER) ------------------ */
+/* ------------------ KID MAZE (SIMPLER + TRAIL + HINT) ------------------ */
 function renderKidMaze(area){
   area.innerHTML = `
     <div class="card">
@@ -36,11 +36,11 @@ function renderKidMaze(area){
         <button class="btn ghost" id="newMaze" type="button">🔁 New</button>
         <button class="btn primary" id="run" type="button">▶ Run</button>
         <button class="btn ghost" id="clear" type="button">🧹 Clear</button>
+        <button class="btn primary" id="hintBtn" type="button">🧭 Hint</button>
         <button class="btn ghost" id="award" type="button">⭐ Award</button>
       </div>
     </div>
 
-    <!-- Layout that keeps arrows + list + maze visible -->
     <div class="kidMazeLayout">
       <div class="card">
         <div class="big">Big Arrows</div>
@@ -55,6 +55,12 @@ function renderKidMaze(area){
           </div>
         </div>
 
+        <div class="hintBanner" style="margin-top:12px;">
+          <div class="muted">Best next move:</div>
+          <div id="hintArrow" class="hintArrow">—</div>
+          <div id="hintText" class="hintText muted">Tap 🧭 Hint if you get stuck.</div>
+        </div>
+
         <p class="hint small muted">Tip: Tap a move in the list to remove it.</p>
 
         <div class="big" style="margin-top:10px;">Move List</div>
@@ -63,7 +69,7 @@ function renderKidMaze(area){
 
       <div class="card">
         <div class="big">Maze</div>
-        <div class="muted">Watch the blue square move.</div>
+        <div class="muted">Trail is highlighted so you can remember where you went.</div>
         <div id="mazeWrap" class="mazeWrap"></div>
       </div>
     </div>
@@ -73,22 +79,42 @@ function renderKidMaze(area){
 
   const listEl = area.querySelector("#list");
   const wrap = area.querySelector("#mazeWrap");
+  const hintArrowEl = area.querySelector("#hintArrow");
+  const hintTextEl = area.querySelector("#hintText");
 
-  // Smaller maze + simpler generation:
-  // 6x6 feels manageable for kids.
+  // Smaller maze for kids
   const W = 6, H = 6;
 
-  // Generate a "perfect maze" then carve extra openings to reduce dead ends
+  // Maze state
   let maze = genMaze(W, H);
-
-  // Soften difficulty: remove some random walls (more open, fewer traps)
   softenMaze(maze, W, H, 10);
 
   let player = {x:0,y:0};
   const exit = {x:W-1,y:H-1};
 
-  const draw = () => { wrap.innerHTML = buildMazeHTML(maze, W, H, player, exit, 44); };
+  // Trail (visited cells)
+  let visited = new Set();
+  const key = (x,y)=>`${x},${y}`;
+  visited.add(key(player.x, player.y));
+
+  function updateHint(){
+    const move = bestMoveTowardExit(maze, player, exit, W, H);
+    if (!move){
+      hintArrowEl.textContent = "⛔";
+      hintTextEl.textContent = "No easy move found (try a different direction).";
+      return;
+    }
+    const arrow = move==="U"?"⬆":move==="D"?"⬇":move==="L"?"⬅":"➡";
+    hintArrowEl.textContent = arrow;
+    hintTextEl.textContent = "Try this direction to get closer to ⭐.";
+  }
+
+  const draw = () => {
+    wrap.innerHTML = buildMazeHTML(maze, W, H, player, exit, visited, 44);
+  };
+
   draw();
+  updateHint();
 
   // Add moves
   area.querySelectorAll("[data-m]").forEach(btn=>{
@@ -98,12 +124,10 @@ function renderKidMaze(area){
       chip.className = "block";
       chip.dataset.m = m;
       chip.textContent = m==="U"?"⬆":m==="D"?"⬇":m==="L"?"⬅":"➡";
-      chip.style.fontSize = "1.2rem";
+      chip.style.fontSize = "1.25rem";
       chip.style.padding = "10px 12px";
       chip.onclick = ()=>chip.remove();
       listEl.appendChild(chip);
-
-      // keep list scrolled to the bottom so kids see the newest move
       listEl.scrollTop = listEl.scrollHeight;
     };
   });
@@ -114,15 +138,24 @@ function renderKidMaze(area){
     maze = genMaze(W, H);
     softenMaze(maze, W, H, 10);
     player = {x:0,y:0};
+    visited = new Set([key(0,0)]);
     listEl.innerHTML = "";
     draw();
+    updateHint();
+  };
+
+  // Manual hint button
+  area.querySelector("#hintBtn").onclick = () => {
+    updateHint();
+    // quick nudge to maze view so kids connect hint → movement
+    wrap.scrollIntoView({behavior:"smooth", block:"center"});
   };
 
   area.querySelector("#run").onclick = async ()=>{
     const moves = Array.from(listEl.querySelectorAll(".block")).map(b=>b.dataset.m);
     if (!moves.length) return alert("Add moves first 🙂");
 
-    // Focus/scroll to the maze so they can watch it move
+    // Focus maze while running
     wrap.scrollIntoView({behavior:"smooth", block:"center"});
 
     for (const m of moves){
@@ -145,8 +178,10 @@ function renderKidMaze(area){
       }
 
       player = nxt;
+      visited.add(key(player.x, player.y));
       draw();
-      await wait(220);
+      updateHint();
+      await wait(240);
 
       if (player.x===exit.x && player.y===exit.y){
         awardStar("Kid maze win");
@@ -159,6 +194,7 @@ function renderKidMaze(area){
 
 function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
+/* ---------- Maze helpers ---------- */
 // Maze cell walls: N,E,S,W true = wall
 function genMaze(w,h){
   const cells = Array.from({length:h},()=>Array.from({length:w},()=>({N:true,E:true,S:true,W:true,vis:false})));
@@ -191,7 +227,7 @@ function genMaze(w,h){
   return cells;
 }
 
-// Remove a handful of random walls to make it more open / kid friendly
+// Remove random walls to make it more open / kid friendly
 function softenMaze(maze, w, h, openings=8){
   const rand = (n)=>Math.floor(Math.random()*n);
   for (let i=0;i<openings;i++){
@@ -201,7 +237,6 @@ function softenMaze(maze, w, h, openings=8){
     const d = dirs[rand(dirs.length)];
     const c = maze[y][x];
 
-    // Try to open wall if neighbor exists
     if (d==="N" && y>0){ c.N=false; maze[y-1][x].S=false; }
     if (d==="S" && y<h-1){ c.S=false; maze[y+1][x].N=false; }
     if (d==="W" && x>0){ c.W=false; maze[y][x-1].E=false; }
@@ -220,7 +255,42 @@ function isBlocked(maze, from, to){
   return true;
 }
 
-function buildMazeHTML(maze,w,h,player,exit,cellSize=44){
+// Choose a “best move” that reduces Manhattan distance AND isn’t blocked
+function bestMoveTowardExit(maze, player, exit, W, H){
+  const candidates = [
+    {m:"U", dx:0, dy:-1},
+    {m:"D", dx:0, dy: 1},
+    {m:"L", dx:-1,dy: 0},
+    {m:"R", dx: 1,dy: 0},
+  ];
+
+  const dist = (x,y)=>Math.abs(exit.x-x)+Math.abs(exit.y-y);
+  const curD = dist(player.x, player.y);
+
+  const valid = candidates
+    .map(c=>{
+      const nx = player.x + c.dx;
+      const ny = player.y + c.dy;
+      if (nx<0||ny<0||nx>=W||ny>=H) return null;
+      const blocked = isBlocked(maze, player, {x:nx,y:ny});
+      if (blocked) return null;
+      return {m:c.m, nx, ny, d: dist(nx,ny)};
+    })
+    .filter(Boolean);
+
+  if (!valid.length) return null;
+
+  // Prefer any move that strictly gets closer; otherwise just pick smallest distance
+  const closer = valid.filter(v=>v.d < curD);
+  const pool = closer.length ? closer : valid;
+
+  pool.sort((a,b)=>a.d-b.d);
+  return pool[0].m;
+}
+
+function buildMazeHTML(maze,w,h,player,exit,visited,cellSize=44){
+  const isVisited = (x,y)=>visited && visited.has(`${x},${y}`);
+
   let html = `<div class="mazeBoard" style="grid-template-columns:repeat(${w}, ${cellSize}px);">`;
   for(let y=0;y<h;y++){
     for(let x=0;x<w;x++){
@@ -229,7 +299,8 @@ function buildMazeHTML(maze,w,h,player,exit,cellSize=44){
       const isE = (x===exit.x && y===exit.y);
 
       const content = isP ? "🟦" : (isE ? "⭐" : "");
-      const bg = isP ? "rgba(99,179,255,.30)" : (isE ? "rgba(255,201,75,.24)" : "rgba(255,255,255,.05)");
+      const trail = isVisited(x,y) ? "rgba(120,220,255,.14)" : "rgba(255,255,255,.05)";
+      const bg = isP ? "rgba(99,179,255,.33)" : (isE ? "rgba(255,201,75,.26)" : trail);
 
       const style = `
         width:${cellSize}px;height:${cellSize}px;
@@ -250,7 +321,7 @@ function buildMazeHTML(maze,w,h,player,exit,cellSize=44){
   return html;
 }
 
-/* ------------------ MATCH CARDS (unchanged) ------------------ */
+/* ------------------ MATCH CARDS (same) ------------------ */
 function renderMatch(area){
   area.innerHTML = `
     <div class="card">
@@ -371,7 +442,7 @@ function renderMatch(area){
   start(5);
 }
 
-/* ------------------ MEMORY SEQUENCE (BETTER HIGHLIGHT) ------------------ */
+/* ------------------ MEMORY SEQUENCE (same as improved) ------------------ */
 function renderSequence(area){
   area.innerHTML = `
     <div class="card">
@@ -381,7 +452,7 @@ function renderSequence(area){
         <button class="btn primary" id="start" type="button">▶ Start</button>
         <button class="btn ghost" id="award" type="button">⭐ Award Star</button>
       </div>
-      <p class="hint small muted">Bigger glow + stronger flash.</p>
+      <p class="hint small muted">Big glow + stronger flash.</p>
     </div>
 
     <div class="card">

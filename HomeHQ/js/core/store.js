@@ -1,13 +1,13 @@
-// HomeHQ Store v1 — profiles + streak + weekly stats + notes
 const Store = (() => {
-  const KEY = "HomeHQ_v1";
+  const KEY = "HomeHQ_v2";
   const STARS_PER_LEVEL = 10;
 
   const defaultState = {
     activeProfile: "Vhon",
+    parentPin: "1234",
     profiles: {
-      Vhon: { stars: 0, streak: 0, lastStarISO: null, notes: "", weekly: {} },
-      Vio:  { stars: 0, streak: 0, lastStarISO: null, notes: "", weekly: {} }
+      Vhon: { stars: 0, streak: 0, lastStarISO: null, notes: "", weekly: {}, badges: [] },
+      Vio:  { stars: 0, streak: 0, lastStarISO: null, notes: "", weekly: {}, badges: [] }
     }
   };
 
@@ -35,20 +35,21 @@ const Store = (() => {
       const raw = localStorage.getItem(KEY);
       if (raw) state = { ...state, ...JSON.parse(raw) };
     } catch {}
-    // ensure shape
+
     if (!state.profiles?.Vhon) state.profiles.Vhon = structuredClone(defaultState.profiles.Vhon);
-    if (!state.profiles?.Vio) state.profiles.Vio = structuredClone(defaultState.profiles.Vio);
+    if (!state.profiles?.Vio)  state.profiles.Vio  = structuredClone(defaultState.profiles.Vio);
+
+    // ensure badges exist
+    state.profiles.Vhon.badges ||= [];
+    state.profiles.Vio.badges  ||= [];
+
+    // ensure PIN exists
+    if (!state.parentPin) state.parentPin = "1234";
   };
 
-  const save = () => {
-    localStorage.setItem(KEY, JSON.stringify(state));
-  };
+  const save = () => localStorage.setItem(KEY, JSON.stringify(state));
 
-  const setActive = (name) => {
-    state.activeProfile = name;
-    save();
-  };
-
+  const setActive = (name) => { state.activeProfile = name; save(); };
   const current = () => state.profiles[state.activeProfile];
 
   const levelInfo = (stars) => {
@@ -59,9 +60,8 @@ const Store = (() => {
 
   const trackWeekly = (profile, deltaStars) => {
     const today = isoToday();
-    const w = profile.weekly || {};
-    w[today] = (w[today] || 0) + deltaStars;
-    profile.weekly = w;
+    profile.weekly ||= {};
+    profile.weekly[today] = (profile.weekly[today] || 0) + deltaStars;
   };
 
   const applyStreak = (profile) => {
@@ -85,24 +85,16 @@ const Store = (() => {
     save();
   };
 
-  const setNotes = (text) => {
-    const p = current();
-    p.notes = text || "";
-    save();
-  };
-
-  const resetProfile = (name) => {
-    state.profiles[name] = structuredClone(defaultState.profiles[name]);
-    save();
-  };
+  const setNotes = (text) => { current().notes = text || ""; save(); };
+  const resetProfile = (name) => { state.profiles[name] = structuredClone(defaultState.profiles[name]); save(); };
 
   const resetStreaks = () => {
-    Object.values(state.profiles).forEach(p => {
-      p.streak = 0;
-      p.lastStarISO = null;
-    });
+    Object.values(state.profiles).forEach(p => { p.streak = 0; p.lastStarISO = null; });
     save();
   };
+
+  const setParentPin = (pin) => { state.parentPin = String(pin || "").trim(); save(); };
+  const getParentPin = () => state.parentPin;
 
   const getState = () => state;
 
@@ -110,6 +102,7 @@ const Store = (() => {
     load, save,
     setActive, current, getState,
     addStars, levelInfo,
-    setNotes, resetProfile, resetStreaks
+    setNotes, resetProfile, resetStreaks,
+    setParentPin, getParentPin
   };
 })();

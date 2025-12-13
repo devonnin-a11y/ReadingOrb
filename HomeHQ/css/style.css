@@ -199,3 +199,77 @@ body{
   font-weight:900;
   letter-spacing:.18em;
 }
+
+/* --- Kid Maze layout + big arrows --- */
+.kidMazeLayout{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:10px;
+}
+@media (max-width:520px){
+  .kidMazeLayout{ grid-template-columns: 1fr; }
+}
+
+.arrowPad{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  align-items:center;
+}
+.arrowRow{
+  display:flex;
+  gap:10px;
+}
+.arrowBtn{
+  width:84px;
+  height:84px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.2);
+  background:linear-gradient(135deg,var(--accent),var(--bolt));
+  color:#04101f;
+  font-size:2.2rem;
+  font-weight:1000;
+  cursor:pointer;
+  box-shadow:0 10px 22px rgba(0,0,0,.35);
+}
+.arrowBtn:active{transform:translateY(1px) scale(.98)}
+
+.mazeWrap{
+  overflow:auto;
+  padding:10px;
+  border-radius:14px;
+  border:1px solid rgba(166,220,255,.16);
+  background:rgba(0,0,0,.12);
+}
+.mazeBoard{
+  display:grid;
+  gap:8px;
+}
+
+/* --- Simon style stronger highlight --- */
+.simonPad{
+  display:grid;
+  grid-template-columns:repeat(2, 1fr);
+  gap:12px;
+  margin-top:12px;
+}
+.simonBtn{
+  height:110px;
+  border-radius:18px;
+  border:1px solid rgba(166,220,255,.25);
+  background:rgba(0,0,0,.22);
+  color:#fff;
+  font-size:2rem;
+  font-weight:1000;
+  cursor:pointer;
+  box-shadow:0 10px 24px rgba(0,0,0,.35);
+}
+.simonBtn.flash{
+  outline:4px solid rgba(255,201,75,.95);
+  box-shadow:
+    0 0 0 6px rgba(99,179,255,.22),
+    0 0 30px rgba(255,201,75,.65),
+    0 18px 30px rgba(0,0,0,.45);
+  transform:scale(1.05);
+  filter:brightness(1.4);
+}

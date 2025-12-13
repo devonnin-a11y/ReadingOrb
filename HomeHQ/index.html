@@ -6,54 +6,63 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#0b1829" />
   <link rel="stylesheet" href="css/style.css" />
-  <link rel="manifest" href="manifest.webmanifest" />
 </head>
 <body>
   <div id="app" class="app">
-    <!-- HEADER -->
     <header class="hq-header">
       <div class="hq-title">
         🏡 <strong>Home HQ</strong>
-        <span class="subtitle">Daily Missions</span>
+        <span class="subtitle">Missions • Stars • Streaks</span>
       </div>
 
-      <div class="profile-switch">
-        <button class="profile-btn active" data-profile="Vhon">
-          <img src="img/vhon.png" />
-          Vhon
+      <div class="profile-switch" aria-label="Profiles">
+        <button class="profile-btn active" data-profile="Vhon" type="button">
+          <img src="img/vhon.png" alt="Vhon" />
+          <span>Vhon</span>
         </button>
-        <button class="profile-btn" data-profile="Vio">
-          <img src="img/vio.png" />
-          Vio
+        <button class="profile-btn" data-profile="Vio" type="button">
+          <img src="img/vio.png" alt="Vio" />
+          <span>Vio</span>
         </button>
       </div>
     </header>
 
-    <!-- PROGRESS BAR -->
-    <section class="progress-bar">
-      <div id="stars">⭐ 0</div>
-      <div id="streak">🔥 0 day streak</div>
-      <div id="level">⚡ Level 1</div>
+    <section class="progress-bar" aria-label="Progress">
+      <div id="starsChip" class="chip">⭐ 0</div>
+      <div id="streakChip" class="chip">🔥 0</div>
+      <div id="levelChip" class="chip">⚡ Lv 1</div>
     </section>
 
-    <!-- NAVIGATION -->
-    <nav class="hq-nav">
-      <button data-route="home" class="nav-btn active">🏠 Home</button>
-      <button data-route="reading" class="nav-btn">📖 Reading</button>
-      <button data-route="math" class="nav-btn">➕ Math</button>
-      <button data-route="coding" class="nav-btn">💻 Coding</button>
+    <section class="levelbar" aria-label="Level progress">
+      <div class="levelbar-label">
+        <span id="levelLeft">Level 1</span>
+        <span id="levelRight">0 / 10</span>
+      </div>
+      <div class="levelbar-track">
+        <div id="levelFill" class="levelbar-fill"></div>
+      </div>
+    </section>
+
+    <nav class="hq-nav" aria-label="Navigation">
+      <button data-route="home" class="nav-btn active" type="button">🏠 Home</button>
+      <button data-route="reading" class="nav-btn" type="button">📖 Reading</button>
+      <button data-route="math" class="nav-btn" type="button">➕ Math</button>
+      <button data-route="coding" class="nav-btn" type="button">💻 Coding</button>
+      <button data-route="parent" class="nav-btn" type="button">🛡 Parent</button>
     </nav>
 
-    <!-- MAIN VIEW -->
-    <main id="view"></main>
+    <main id="view" class="view" aria-live="polite"></main>
   </div>
 
   <script src="js/core/store.js"></script>
   <script src="js/core/router.js"></script>
   <script src="js/core/rewards.js"></script>
 
+  <script src="js/modules/home.js"></script>
   <script src="js/modules/reading.js"></script>
+  <script src="js/modules/math.js"></script>
   <script src="js/modules/coding.js"></script>
+  <script src="js/modules/parent.js"></script>
 
   <script src="js/app.js"></script>
 </body>

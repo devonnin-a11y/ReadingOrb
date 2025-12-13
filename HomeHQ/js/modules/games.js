@@ -24,14 +24,12 @@ Router.register("games", (view) => {
   renderKidMaze(area);
 });
 
-/* ------------------ KID MAZE (SIMPLER + TRAIL + HINT) ------------------ */
+/* ------------------ KID MAZE ------------------ */
 function renderKidMaze(area){
   area.innerHTML = `
-    <div class="card">
+    <div class="card" id="mazeTop">
       <div class="big">🧩 Kid Maze Escape</div>
-      <div class="muted">
-        Add moves with the big arrows → press Run → reach the ⭐.
-      </div>
+      <div class="muted">Add moves with arrows → Run → reach ⭐.</div>
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
         <button class="btn ghost" id="newMaze" type="button">🔁 New</button>
         <button class="btn primary" id="run" type="button">▶ Run</button>
@@ -55,66 +53,67 @@ function renderKidMaze(area){
           </div>
         </div>
 
-        <div class="hintBanner" style="margin-top:12px;">
-          <div class="muted">Best next move:</div>
+        <div id="hintBanner" class="hintBanner" style="margin-top:12px;">
+          <div class="muted">Best next:</div>
           <div id="hintArrow" class="hintArrow">—</div>
-          <div id="hintText" class="hintText muted">Tap 🧭 Hint if you get stuck.</div>
+          <div id="hintText" class="hintText muted">Tap 🧭 Hint if stuck.</div>
         </div>
 
-        <p class="hint small muted">Tip: Tap a move in the list to remove it.</p>
-
-        <div class="big" style="margin-top:10px;">Move List</div>
+        <p class="hint small muted">Tap a move in the list to remove it.</p>
+        <div class="big">Move List</div>
         <div id="list" class="block-program" style="min-height:120px; max-height:240px; overflow:auto;"></div>
       </div>
 
       <div class="card">
         <div class="big">Maze</div>
-        <div class="muted">Trail is highlighted so you can remember where you went.</div>
+        <div class="muted">Trail stays highlighted.</div>
         <div id="mazeWrap" class="mazeWrap"></div>
       </div>
     </div>
   `;
 
-  area.querySelector("#award").onclick = () => awardStar("Kid maze award");
-
   const listEl = area.querySelector("#list");
   const wrap = area.querySelector("#mazeWrap");
   const hintArrowEl = area.querySelector("#hintArrow");
   const hintTextEl = area.querySelector("#hintText");
+  const hintBanner = area.querySelector("#hintBanner");
 
-  // Smaller maze for kids
+  area.querySelector("#award").onclick = () => awardStar("Kid maze award");
+
   const W = 6, H = 6;
-
-  // Maze state
   let maze = genMaze(W, H);
   softenMaze(maze, W, H, 10);
 
   let player = {x:0,y:0};
   const exit = {x:W-1,y:H-1};
 
-  // Trail (visited cells)
-  let visited = new Set();
-  const key = (x,y)=>`${x},${y}`;
-  visited.add(key(player.x, player.y));
+  let visited = new Set([`${player.x},${player.y}`]);
 
-  function updateHint(){
+  let invalidStreak = 0; // bump counter for blink hints
+
+  const draw = () => { wrap.innerHTML = buildMazeHTML(maze, W, H, player, exit, visited, 44); };
+  draw();
+
+  function blinkHint(){
+    hintArrowEl.classList.remove("blink");
+    void hintArrowEl.offsetWidth; // restart animation
+    hintArrowEl.classList.add("blink");
+  }
+
+  function updateHint(forceBlink=false){
     const move = bestMoveTowardExit(maze, player, exit, W, H);
     if (!move){
       hintArrowEl.textContent = "⛔";
-      hintTextEl.textContent = "No easy move found (try a different direction).";
+      hintTextEl.textContent = "Try a different direction 🙂";
+      if (forceBlink) blinkHint();
       return;
     }
-    const arrow = move==="U"?"⬆":move==="D"?"⬇":move==="L"?"⬅":"➡";
-    hintArrowEl.textContent = arrow;
-    hintTextEl.textContent = "Try this direction to get closer to ⭐.";
+    hintArrowEl.textContent = move==="U"?"⬆":move==="D"?"⬇":move==="L"?"⬅":"➡";
+    hintTextEl.textContent = "This move gets you closer to ⭐.";
+    if (forceBlink) blinkHint();
   }
 
-  const draw = () => {
-    wrap.innerHTML = buildMazeHTML(maze, W, H, player, exit, visited, 44);
-  };
-
-  draw();
-  updateHint();
+  updateHint(false);
 
   // Add moves
   area.querySelectorAll("[data-m]").forEach(btn=>{
@@ -138,16 +137,15 @@ function renderKidMaze(area){
     maze = genMaze(W, H);
     softenMaze(maze, W, H, 10);
     player = {x:0,y:0};
-    visited = new Set([key(0,0)]);
+    visited = new Set(["0,0"]);
     listEl.innerHTML = "";
+    invalidStreak = 0;
     draw();
-    updateHint();
+    updateHint(true);
   };
 
-  // Manual hint button
-  area.querySelector("#hintBtn").onclick = () => {
-    updateHint();
-    // quick nudge to maze view so kids connect hint → movement
+  area.querySelector("#hintBtn").onclick = ()=>{
+    updateHint(true);
     wrap.scrollIntoView({behavior:"smooth", block:"center"});
   };
 
@@ -155,7 +153,6 @@ function renderKidMaze(area){
     const moves = Array.from(listEl.querySelectorAll(".block")).map(b=>b.dataset.m);
     if (!moves.length) return alert("Add moves first 🙂");
 
-    // Focus maze while running
     wrap.scrollIntoView({behavior:"smooth", block:"center"});
 
     for (const m of moves){
@@ -165,22 +162,26 @@ function renderKidMaze(area){
       if (m==="L") nxt.x--;
       if (m==="R") nxt.x++;
 
-      // bounds
-      if (nxt.x<0||nxt.y<0||nxt.x>=W||nxt.y>=H){
+      const out = (nxt.x<0||nxt.y<0||nxt.x>=W||nxt.y>=H);
+      const wall = !out && isBlocked(maze, player, nxt);
+
+      if (out || wall){
+        invalidStreak++;
+        hintBanner.classList.remove("shake");
+        void hintBanner.offsetWidth;
+        hintBanner.classList.add("shake");
+
+        // after 2 bumps, blink hint automatically
+        if (invalidStreak >= 2) updateHint(true);
         await wait(140);
         continue;
       }
 
-      // walls
-      if (isBlocked(maze, player, nxt)){
-        await wait(140);
-        continue;
-      }
-
+      invalidStreak = 0;
       player = nxt;
-      visited.add(key(player.x, player.y));
+      visited.add(`${player.x},${player.y}`);
       draw();
-      updateHint();
+      updateHint(false);
       await wait(240);
 
       if (player.x===exit.x && player.y===exit.y){
@@ -192,10 +193,9 @@ function renderKidMaze(area){
   };
 }
 
+/* ---------- Maze helpers ---------- */
 function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
-/* ---------- Maze helpers ---------- */
-// Maze cell walls: N,E,S,W true = wall
 function genMaze(w,h){
   const cells = Array.from({length:h},()=>Array.from({length:w},()=>({N:true,E:true,S:true,W:true,vis:false})));
   const stack = [{x:0,y:0}];
@@ -227,12 +227,10 @@ function genMaze(w,h){
   return cells;
 }
 
-// Remove random walls to make it more open / kid friendly
 function softenMaze(maze, w, h, openings=8){
   const rand = (n)=>Math.floor(Math.random()*n);
   for (let i=0;i<openings;i++){
-    const x = rand(w);
-    const y = rand(h);
+    const x = rand(w), y = rand(h);
     const dirs = ["N","E","S","W"];
     const d = dirs[rand(dirs.length)];
     const c = maze[y][x];
@@ -255,7 +253,6 @@ function isBlocked(maze, from, to){
   return true;
 }
 
-// Choose a “best move” that reduces Manhattan distance AND isn’t blocked
 function bestMoveTowardExit(maze, player, exit, W, H){
   const candidates = [
     {m:"U", dx:0, dy:-1},
@@ -263,34 +260,27 @@ function bestMoveTowardExit(maze, player, exit, W, H){
     {m:"L", dx:-1,dy: 0},
     {m:"R", dx: 1,dy: 0},
   ];
-
   const dist = (x,y)=>Math.abs(exit.x-x)+Math.abs(exit.y-y);
   const curD = dist(player.x, player.y);
 
-  const valid = candidates
-    .map(c=>{
-      const nx = player.x + c.dx;
-      const ny = player.y + c.dy;
-      if (nx<0||ny<0||nx>=W||ny>=H) return null;
-      const blocked = isBlocked(maze, player, {x:nx,y:ny});
-      if (blocked) return null;
-      return {m:c.m, nx, ny, d: dist(nx,ny)};
-    })
-    .filter(Boolean);
+  const valid = candidates.map(c=>{
+    const nx = player.x + c.dx;
+    const ny = player.y + c.dy;
+    if (nx<0||ny<0||nx>=W||ny>=H) return null;
+    if (isBlocked(maze, player, {x:nx,y:ny})) return null;
+    return {m:c.m, d: dist(nx,ny)};
+  }).filter(Boolean);
 
   if (!valid.length) return null;
 
-  // Prefer any move that strictly gets closer; otherwise just pick smallest distance
   const closer = valid.filter(v=>v.d < curD);
   const pool = closer.length ? closer : valid;
-
   pool.sort((a,b)=>a.d-b.d);
   return pool[0].m;
 }
 
 function buildMazeHTML(maze,w,h,player,exit,visited,cellSize=44){
   const isVisited = (x,y)=>visited && visited.has(`${x},${y}`);
-
   let html = `<div class="mazeBoard" style="grid-template-columns:repeat(${w}, ${cellSize}px);">`;
   for(let y=0;y<h;y++){
     for(let x=0;x<w;x++){
@@ -321,7 +311,7 @@ function buildMazeHTML(maze,w,h,player,exit,visited,cellSize=44){
   return html;
 }
 
-/* ------------------ MATCH CARDS (same) ------------------ */
+/* ------------------ MATCH CARDS (shake on wrong) ------------------ */
 function renderMatch(area){
   area.innerHTML = `
     <div class="card">
@@ -355,7 +345,7 @@ function renderMatch(area){
 
     <div class="card">
       <div id="board"></div>
-      <p class="hint small muted">Tip: Matching all pairs awards ⭐ automatically.</p>
+      <p class="hint small muted">Wrong match = shake.</p>
     </div>
   `;
 
@@ -368,6 +358,13 @@ function renderMatch(area){
   };
 
   const boardEl = area.querySelector("#board");
+
+  function shuffle(a){
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+  }
 
   function start(n){
     const total = n*n;
@@ -387,10 +384,12 @@ function renderMatch(area){
     let matched = 0;
 
     boardEl.innerHTML = `
-      <div style="display:grid; grid-template-columns:repeat(${n}, 1fr); gap:8px;">
+      <div id="grid" style="display:grid; grid-template-columns:repeat(${n}, 1fr); gap:8px;">
         ${Array.from({length: usable}).map((_,i)=>`
           <button class="cardBtn" data-i="${i}" type="button"
-            style="height:${Math.max(44, 320/n)}px; border-radius:14px; border:1px solid rgba(166,220,255,.2); background:rgba(0,0,0,.25); color:#fff; font-size:${Math.max(16, 44 - n*2)}px; font-weight:1000; cursor:pointer;">
+            style="height:${Math.max(44, 320/n)}px; border-radius:14px; border:1px solid rgba(166,220,255,.2);
+              background:rgba(0,0,0,.25); color:#fff; font-size:${Math.max(16, 44 - n*2)}px;
+              font-weight:1000; cursor:pointer;">
             ?
           </button>
         `).join("")}
@@ -424,7 +423,13 @@ function renderMatch(area){
           }
         } else {
           lock = true;
-          await wait(550);
+
+          // SHAKE feedback
+          first.classList.remove("shake"); btn.classList.remove("shake");
+          void first.offsetWidth;
+          first.classList.add("shake"); btn.classList.add("shake");
+
+          await wait(520);
           first.textContent = "?";
           btn.textContent = "?";
           first.dataset.open = "0";
@@ -442,32 +447,32 @@ function renderMatch(area){
   start(5);
 }
 
-/* ------------------ MEMORY SEQUENCE (same as improved) ------------------ */
+/* ------------------ MEMORY SEQUENCE (shake on wrong) ------------------ */
 function renderSequence(area){
   area.innerHTML = `
     <div class="card">
       <div class="big">🧠 Memory Sequence</div>
-      <div class="muted">Watch the sequence, then tap it back in order.</div>
+      <div class="muted">Watch, then repeat the pattern.</div>
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
         <button class="btn primary" id="start" type="button">▶ Start</button>
         <button class="btn ghost" id="award" type="button">⭐ Award Star</button>
       </div>
-      <p class="hint small muted">Big glow + stronger flash.</p>
     </div>
 
-    <div class="card">
+    <div class="card" id="seqCard">
       <div class="muted">Level: <strong id="lvl">1</strong></div>
       <div id="pad" class="simonPad">
         ${["A","B","C","D"].map(k=>`
           <button class="simonBtn" data-k="${k}" type="button">${k}</button>
         `).join("")}
       </div>
-      <p class="hint small muted">Clearing levels awards ⭐.</p>
+      <p class="hint small muted">Wrong input = shake.</p>
     </div>
   `;
 
   area.querySelector("#award").onclick = () => awardStar("Sequence award");
 
+  const card = area.querySelector("#seqCard");
   const lvlEl = area.querySelector("#lvl");
   const buttons = Array.from(area.querySelectorAll(".simonBtn"));
   const keys = ["A","B","C","D"];
@@ -515,31 +520,25 @@ function renderSequence(area){
     btn.onclick = async ()=>{
       if (locked || !seq.length) return;
       const k = btn.dataset.k;
-
       input.push(k);
       await flash(k);
 
       const idx = input.length-1;
       if (input[idx] !== seq[idx]){
-        alert("Oops! Try again 🙂");
+        card.classList.remove("shake");
+        void card.offsetWidth;
+        card.classList.add("shake");
+        showToast("❌ Try again!", 900);
         reset();
         return;
       }
 
       if (input.length === seq.length){
         awardStar("Sequence level cleared");
-        alert("✅ Level cleared! +⭐");
+        showToast("✅ Nice!", 900);
         level++;
         next();
       }
     };
   });
-}
-
-/* helpers */
-function shuffle(a){
-  for(let i=a.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [a[i],a[j]]=[a[j],a[i]];
-  }
 }

@@ -1,93 +1,80 @@
-// Global FX + Rewards utilities
+// Rewards / Stars / Confetti / Badges + Toast
+// Safe: if a toast already exists, it updates + auto-hides.
 
-function spawnMorphBurst() {
-  const fxLayer = document.getElementById("fxLayer");
-  if (!fxLayer) return;
+function awardStar(source = "General") {
+  try { Store.addStars(1); } catch {}
+  try { updateProgressUI(); } catch {}
+  try { burstConfetti(); } catch {}
+  try { maybeAwardBadges(source); } catch {}
+  showToast(`⭐ +1 Star (${source})`, 1200);
+}
 
-  const colors = [
-    "rgba(99,179,255,0.95)",
-    "rgba(255,201,75,0.95)",
-    "rgba(255,75,106,0.95)",
-    "rgba(255,255,255,0.9)"
-  ];
+function showToast(text, ms = 1200) {
+  let el = document.getElementById("toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "toast";
+    el.className = "toast";
+    el.hidden = true;
+    el.title = "Click to dismiss";
+    el.addEventListener("click", () => (el.hidden = true));
+    document.body.appendChild(el);
+  }
 
-  const cx = Math.round(window.innerWidth * 0.5);
-  const cy = Math.round(window.innerHeight * 0.18);
+  el.textContent = text;
+  el.hidden = false;
 
-  const rand = (min, max) => Math.random() * (max - min) + min;
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => { el.hidden = true; }, ms);
+}
 
-  const count = 28;
-  for (let i = 0; i < count; i++) {
-    const el = document.createElement("div");
-    el.className = "fx";
-    el.style.background = colors[i % colors.length];
+// Simple confetti burst (uses fxLayer from index.html)
+function burstConfetti() {
+  const layer = document.getElementById("fxLayer");
+  if (!layer) return;
 
-    const dx = rand(-180, 180);
-    const dy = rand(-20, 220);
+  const rect = { w: window.innerWidth, h: window.innerHeight };
+  const n = 18;
 
-    el.style.setProperty("--x0", `${cx}px`);
-    el.style.setProperty("--y0", `${cy}px`);
-    el.style.setProperty("--x1", `${cx + dx}px`);
-    el.style.setProperty("--y1", `${cy + dy}px`);
-    el.style.setProperty("--r", `${rand(-540, 540)}deg`);
+  for (let i = 0; i < n; i++) {
+    const d = document.createElement("div");
+    d.className = "fx";
 
-    el.style.left = `${cx}px`;
-    el.style.top = `${cy}px`;
+    const x0 = (rect.w * 0.5) + (Math.random() * 80 - 40);
+    const y0 = rect.h - 90;
 
-    if (Math.random() < 0.35) {
-      el.style.width = "6px";
-      el.style.height = "18px";
-      el.style.borderRadius = "2px";
-    }
+    const x1 = x0 + (Math.random() * 260 - 130);
+    const y1 = y0 - (Math.random() * 240 + 140);
 
-    fxLayer.appendChild(el);
-    el.addEventListener("animationend", () => el.remove());
+    d.style.left = "0px";
+    d.style.top = "0px";
+    d.style.setProperty("--x0", `${x0}px`);
+    d.style.setProperty("--y0", `${y0}px`);
+    d.style.setProperty("--x1", `${x1}px`);
+    d.style.setProperty("--y1", `${y1}px`);
+    d.style.setProperty("--r", `${Math.floor(Math.random() * 520) - 260}deg`);
+
+    layer.appendChild(d);
+    setTimeout(() => d.remove(), 700);
   }
 }
 
-function updateProgressUI() {
-  const p = Store.current();
-  const info = Store.levelInfo(p.stars);
+function maybeAwardBadges(source) {
+  // Minimal badge system (non-breaking).
+  // If you already have a badge system, this won't interfere.
+  const p = Store.current?.();
+  if (!p) return;
+  p.badges ||= [];
 
-  document.getElementById("starsChip").textContent = `⭐ ${p.stars}`;
-  document.getElementById("streakChip").textContent = `🔥 ${p.streak}`;
-  document.getElementById("levelChip").textContent = `⚡ Lv ${info.level}`;
+  const add = (b) => {
+    if (!p.badges.includes(b)) {
+      p.badges.push(b);
+      Store.save?.();
+      showToast(`🏅 Badge: ${b}`, 1400);
+    }
+  };
 
-  const badges = (p.badges || []).length;
-  document.getElementById("badgeChip").textContent = `🏅 ${badges}`;
-
-  document.getElementById("levelLeft").textContent = `Level ${info.level}`;
-  document.getElementById("levelRight").textContent = `${info.into} / ${info.per}`;
-  document.getElementById("levelFill").style.width = `${(info.into / info.per) * 100}%`;
-}
-
-// Badge rules (simple + motivating)
-function evaluateBadges() {
-  const p = Store.current();
-  const info = Store.levelInfo(p.stars);
-
-  const badges = new Set(p.badges || []);
-
-  // first star
-  if (p.stars >= 1) badges.add("First Star");
-
-  // streak badges
-  if (p.streak >= 3) badges.add("3-Day Streak");
-  if (p.streak >= 7) badges.add("7-Day Streak");
-
-  // level badges
-  if (info.level >= 2) badges.add("Level 2");
-  if (info.level >= 5) badges.add("Level 5");
-
-  p.badges = Array.from(badges);
-  Store.save();
-}
-
-// One function to use everywhere
-function awardStar(reason = "") {
-  Store.addStars(1);
-  evaluateBadges();
-  updateProgressUI();
-  spawnMorphBurst();
-  if (reason) console.log("Awarded star:", reason);
+  if (p.stars >= 5) add("Rookie Star");
+  if (p.stars >= 20) add("Star Ranger");
+  if ((p.streak || 0) >= 3) add("Streak Spark");
 }

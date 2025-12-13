@@ -8,6 +8,32 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+  <!-- Global FX (confetti / morph burst) -->
+  <div id="fxLayer" class="fx-layer" aria-hidden="true"></div>
+
+  <!-- Parent Lock Modal -->
+  <div id="pinOverlay" class="modal-overlay" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
+      <h3 id="pinTitle" class="modal-title">🛡 Parent Lock</h3>
+      <p class="modal-text">Enter PIN to open Parent Dashboard.</p>
+
+      <div class="pin-row">
+        <input id="pinInput" class="pin-input" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="PIN" />
+        <button id="pinUnlock" class="btn primary" type="button">Unlock</button>
+      </div>
+
+      <div class="modal-actions">
+        <button id="pinCancel" class="btn ghost" type="button">Cancel</button>
+      </div>
+      <p class="hint small muted" style="margin-top:10px;">Default PIN: <span class="kbd">1234</span></p>
+    </div>
+  </div>
+
+  <!-- Floating Home Button (always accessible) -->
+  <button id="homeFab" class="home-fab" type="button" title="Back to Home">
+    🏠
+  </button>
+
   <div id="app" class="app">
     <header class="hq-header">
       <div class="hq-title">
@@ -31,6 +57,7 @@
       <div id="starsChip" class="chip">⭐ 0</div>
       <div id="streakChip" class="chip">🔥 0</div>
       <div id="levelChip" class="chip">⚡ Lv 1</div>
+      <div id="badgeChip" class="chip">🏅 0</div>
     </section>
 
     <section class="levelbar" aria-label="Level progress">
@@ -43,7 +70,8 @@
       </div>
     </section>
 
-    <nav class="hq-nav" aria-label="Navigation">
+    <!-- Sticky navigation (polish pass) -->
+    <nav class="hq-nav sticky" aria-label="Navigation">
       <button data-route="home" class="nav-btn active" type="button">🏠 Home</button>
       <button data-route="reading" class="nav-btn" type="button">📖 Reading</button>
       <button data-route="math" class="nav-btn" type="button">➕ Math</button>

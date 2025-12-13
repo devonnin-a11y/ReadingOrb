@@ -1,10 +1,10 @@
 const Store = (() => {
-  const KEY = "HomeHQ_v2";
+  const KEY = "HomeHQ_v3";
   const STARS_PER_LEVEL = 10;
 
   const defaultState = {
     activeProfile: "Vhon",
-    parentPin: "1234",
+    parentPin: "0111",
     profiles: {
       Vhon: { stars: 0, streak: 0, lastStarISO: null, notes: "", weekly: {}, badges: [] },
       Vio:  { stars: 0, streak: 0, lastStarISO: null, notes: "", weekly: {}, badges: [] }
@@ -36,15 +36,15 @@ const Store = (() => {
       if (raw) state = { ...state, ...JSON.parse(raw) };
     } catch {}
 
-    if (!state.profiles?.Vhon) state.profiles.Vhon = structuredClone(defaultState.profiles.Vhon);
-    if (!state.profiles?.Vio)  state.profiles.Vio  = structuredClone(defaultState.profiles.Vio);
+    // Ensure shape
+    state.profiles ||= {};
+    state.profiles.Vhon ||= structuredClone(defaultState.profiles.Vhon);
+    state.profiles.Vio  ||= structuredClone(defaultState.profiles.Vio);
 
-    // ensure badges exist
     state.profiles.Vhon.badges ||= [];
     state.profiles.Vio.badges  ||= [];
 
-    // ensure PIN exists
-    if (!state.parentPin) state.parentPin = "1234";
+    if (state.parentPin == null || state.parentPin === "") state.parentPin = "0111";
   };
 
   const save = () => localStorage.setItem(KEY, JSON.stringify(state));
@@ -86,14 +86,18 @@ const Store = (() => {
   };
 
   const setNotes = (text) => { current().notes = text || ""; save(); };
-  const resetProfile = (name) => { state.profiles[name] = structuredClone(defaultState.profiles[name]); save(); };
+
+  const resetProfile = (name) => {
+    state.profiles[name] = structuredClone(defaultState.profiles[name]);
+    save();
+  };
 
   const resetStreaks = () => {
     Object.values(state.profiles).forEach(p => { p.streak = 0; p.lastStarISO = null; });
     save();
   };
 
-  const setParentPin = (pin) => { state.parentPin = String(pin || "").trim(); save(); };
+  const setParentPin = (pin) => { state.parentPin = String(pin ?? "").trim(); save(); };
   const getParentPin = () => state.parentPin;
 
   const getState = () => state;

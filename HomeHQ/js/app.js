@@ -24,6 +24,9 @@ const pinInput = document.getElementById("pinInput");
 const pinUnlock = document.getElementById("pinUnlock");
 const pinCancel = document.getElementById("pinCancel");
 
+// Force hidden on load (belt + suspenders)
+pinOverlay.hidden = true;
+
 function openPinModal() {
   pinInput.value = "";
   pinOverlay.hidden = false;
@@ -35,7 +38,7 @@ function closePinModal() {
   pinInput.value = "";
 }
 
-// Close if clicking dim background (but not clicking inside modal)
+// Close if clicking background (not the card)
 pinOverlay.addEventListener("click", (e) => {
   if (e.target === pinOverlay) closePinModal();
 });
@@ -46,8 +49,8 @@ pinUnlock.onclick = () => {
   const entered = String(pinInput.value || "").trim();
   if (entered === Store.getParentPin()) {
     closePinModal();
-    // Route AFTER close so it never “sticks”
-    setTimeout(() => Router.go("parent"), 0);
+    // Route AFTER close so overlay never sticks
+    requestAnimationFrame(() => Router.go("parent"));
   } else {
     alert("Wrong PIN 🙂");
     pinInput.focus();
@@ -63,7 +66,7 @@ document.querySelectorAll(".nav-btn").forEach(btn => {
   btn.onclick = () => {
     const route = btn.dataset.route;
 
-    // PIN gate ONLY for parent tab
+    // PIN gate ONLY for Parent tab
     if (route === "parent") {
       openPinModal();
       return;

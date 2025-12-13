@@ -5,6 +5,9 @@ Router.register("coding", (view) => {
       <div class="muted">
         Drag blocks into the program, then Run. Earn ⭐ for completing a program.
       </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+        <button class="btn ghost" id="backHome" type="button">🏠 Back to Home</button>
+      </div>
     </div>
 
     <div class="card">
@@ -24,6 +27,7 @@ Router.register("coding", (view) => {
         <button class="btn primary" id="runBlocks" type="button">▶ Run Blocks</button>
         <button class="btn ghost" id="clearBlocks" type="button">🧹 Clear</button>
       </div>
+      <p class="hint small muted">Tip: Tap a block in the Program Area to remove it.</p>
     </div>
 
     <div class="card">
@@ -36,10 +40,12 @@ Router.register("coding", (view) => {
 
     <div class="card">
       <div class="big">Real Code Mode</div>
-      <div class="muted">Kid-friendly commands: <span class="kbd">say("text")</span>, <span class="kbd">move(20)</span>, <span class="kbd">jump()</span></div>
+      <div class="muted">Allowed commands: <span class="kbd">say("text")</span>, <span class="kbd">move(20)</span>, <span class="kbd">jump()</span></div>
+
       <textarea id="code" rows="6" style="width:100%; margin-top:10px; padding:10px; border-radius:14px; border:1px solid rgba(166,220,255,.2); background:rgba(0,0,0,.25); color:#fff;">say("Hi!");
 move(20);
 jump();</textarea>
+
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
         <button class="btn primary" id="runCode" type="button">▶ Run Code</button>
         <button class="btn ghost" id="codeStar" type="button">⭐ Award Star</button>
@@ -47,12 +53,13 @@ jump();</textarea>
     </div>
   `;
 
+  view.querySelector("#backHome").onclick = () => Router.go("home");
+
   const palette = view.querySelector("#palette");
   const program = view.querySelector("#program");
   const sprite = view.querySelector("#sprite");
   const speech = view.querySelector("#speech");
 
-  // drag helpers
   const onDragStart = (e) => {
     const t = e.target;
     if (!t.classList.contains("block")) return;
@@ -76,18 +83,19 @@ jump();</textarea>
       "JUMP";
 
     block.addEventListener("dragstart", onDragStart);
-    block.onclick = () => block.remove(); // tap to remove
+    block.onclick = () => block.remove();
     program.appendChild(block);
   });
 
-  // stage actions
   let x = 0;
   const setSprite = () => { sprite.style.transform = `translateX(${x}px)`; };
+
+  const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
   const doSay = async (text="Hi!") => {
     speech.textContent = text;
     speech.classList.add("on");
-    await new Promise(r => setTimeout(r, 700));
+    await wait(700);
     speech.classList.remove("on");
   };
 
@@ -95,14 +103,14 @@ jump();</textarea>
     x += dx;
     x = Math.max(-10, Math.min(220, x));
     setSprite();
-    await new Promise(r => setTimeout(r, 280));
+    await wait(280);
   };
 
   const doJump = async () => {
     sprite.style.transform = `translateX(${x}px) translateY(-22px)`;
-    await new Promise(r => setTimeout(r, 180));
+    await wait(180);
     sprite.style.transform = `translateX(${x}px) translateY(0px)`;
-    await new Promise(r => setTimeout(r, 120));
+    await wait(120);
   };
 
   const runSequence = async (seq) => {
@@ -113,7 +121,6 @@ jump();</textarea>
     }
   };
 
-  // Run blocks
   view.querySelector("#runBlocks").onclick = async () => {
     const blocks = Array.from(program.querySelectorAll(".block"));
     if (!blocks.length) return alert("Drag at least 1 block 🙂");
@@ -126,43 +133,41 @@ jump();</textarea>
 
     await runSequence(seq);
 
-    Store.addStars(1);
-    updateProgressUI();
+    awardStar("Coding blocks");
     alert("🎉 Program complete! +⭐");
   };
 
   view.querySelector("#clearBlocks").onclick = () => { program.innerHTML = ""; };
 
-  // Run code (very safe parser: only accepts say/move/jump)
   view.querySelector("#runCode").onclick = async () => {
-    const src = (view.querySelector("#code").value || "").split("\n").map(l => l.trim()).filter(Boolean);
-    const seq = [];
+    const src = (view.querySelector("#code").value || "")
+      .split("\n").map(l => l.trim()).filter(Boolean);
 
+    const seq = [];
     for (const line of src) {
       if (line.startsWith("say(")) {
         const m = line.match(/say\(["'](.+?)["']\)\s*;?$/);
-        if (!m) return alert("Code error in say(). Use say(\"Hi!\");");
+        if (!m) return alert('Use: say("Hi!");');
         seq.push({ type:"say", text:m[1] });
       } else if (line.startsWith("move(")) {
         const m = line.match(/move\((\-?\d+)\)\s*;?$/);
-        if (!m) return alert("Code error in move(). Use move(20);");
+        if (!m) return alert("Use: move(20);");
         seq.push({ type:"move", dx:Number(m[1]) });
-      } else if (line.startsWith("jump(") || line === "jump();" || line === "jump()") {
+      } else if (line === "jump();" || line === "jump()" || line.startsWith("jump(")) {
         seq.push({ type:"jump" });
       } else {
-        return alert("Only say(), move(), jump() allowed right now 🙂");
+        return alert("Only say(), move(), jump() allowed 🙂");
       }
     }
 
     await runSequence(seq);
-    Store.addStars(1);
-    updateProgressUI();
+
+    awardStar("Coding code");
     alert("🚀 Nice coding! +⭐");
   };
 
   view.querySelector("#codeStar").onclick = () => {
-    Store.addStars(1);
-    updateProgressUI();
+    awardStar("Coding manual award");
     alert("⭐ Star awarded!");
   };
 
